@@ -9,14 +9,15 @@ function basePlan(partial: Partial<ModelOrderPlan>): ModelOrderPlan {
     monthlyStdDev: 3,
     hasSeasonalIndex: true,
     forecastByMonth: {},
-    octEneMonths: ["2026-10", "2026-11", "2026-12", "2027-01"],
+    arrivalMonth: "2027-02",
+    gapMonths: ["2026-10", "2026-11", "2026-12", "2027-01"],
     coverageMonths: ["2027-02", "2027-03", "2027-04"],
-    demandOctEne: 60,
+    demandGap: 60,
     demandCoverageWindow: 45,
     patioAtCutoff: 135,
     transitoAtCutoff: 103,
-    projectedStockFeb: 178,
-    unmetDemandOctEne: 0,
+    projectedStockAtArrival: 178,
+    unmetDemandGap: 0,
     imputedStockoutMonths: 0,
     safetyTier: "high",
     safetyStockUnits: 8,
@@ -51,7 +52,7 @@ describe("explainOrder", () => {
   });
 
   it("avisa que la demanda sin stock se pierde y no se suma al pedido", () => {
-    const text = explainOrder(basePlan({ projectedStockFeb: 0, unmetDemandOctEne: 64.7 }));
+    const text = explainOrder(basePlan({ projectedStockAtArrival: 0, unmetDemandGap: 64.7 }));
     expect(text).toContain("64.7");
     expect(text).toContain("ventas perdidas");
   });

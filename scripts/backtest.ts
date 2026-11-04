@@ -1,9 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { computeErrorMetrics, runBacktest, type BacktestRow } from "@/lib/engine/backtest";
-import { loadCycleConfig } from "@/lib/engine/config";
 import { monthKey } from "@/lib/engine/months";
-import type { ModelEconomics } from "@/lib/engine/order";
-import { parseExcelFile } from "@/lib/sources/excel";
+import { loadCaseContext } from "./caseContext";
 
 const pct = (v: number | null) => (v === null ? "n/d" : `${(v * 100).toFixed(0)}%`);
 const signedPct = (v: number | null) => (v === null ? "n/d" : `${v >= 0 ? "+" : ""}${(v * 100).toFixed(0)}%`);
@@ -44,31 +42,17 @@ function toMarkdownTable(summaries: ReturnType<typeof summarize>[], firstColumn:
 
 function main() {
   const filePath = process.argv[2] ?? "data/seed/caso1.xlsx";
-  const config = loadCycleConfig();
-  const parsed = parseExcelFile(
-    filePath,
-    config.models.map((m) => m.name),
-    { fleetOutlierMinUnits: config.fleet_outlier_min_units },
-  );
-
-  const economicsByModel = new Map<string, ModelEconomics>();
-  for (const e of parsed.economics) {
-    if (!e.modelName) continue;
-    economicsByModel.set(e.modelName, {
-      unitCost: e.avgUnitCost ?? 0,
-      marginPct: e.marginPct ?? 0,
-      monthlyFinCost: e.monthlyFinCostPerUnit ?? 0,
-    });
-  }
+  const { config, parsed, cycle, models, economicsByModel } = loadCaseContext(filePath);
 
   const rows = runBacktest({
     config,
+    models,
     data: parsed,
     economicsByModel,
-    dataEndMonth: monthKey(config.cutoff_date),
+    dataEndMonth: monthKey(cycle.cutoffDate),
   });
 
-  const byModel = config.models.map((m) =>
+  const byModel = models.map((m) =>
     summarize({ label: m.name, rows: rows.filter((r) => r.modelName === m.name) }),
   );
   const byCutoff = config.backtest_cutoffs.map((c) =>
@@ -88,10 +72,10 @@ function main() {
   const markdown = [
     "# Backtest del pronóstico",
     "",
-    `Generado con \`bun run backtest\` sobre \`${filePath}\` (datos hasta ${config.cutoff_date}).`,
+    `Generado con \`bun run backtest\` sobre \`${filePath}\` (datos hasta ${cycle.cutoffDate}).`,
     "",
     "Para cada corte (" + config.backtest_cutoffs.join(", ") + ") el motor usa **solo datos anteriores al corte** y pronostica",
-    `la ventana de cobertura que cubriría el pedido de ese corte (meses +${config.lead_time_months + 1} a +${config.lead_time_months + config.order_coverage_months}). Se compara contra lo que pasó realmente.`,
+    `la ventana de cobertura que cubriría el pedido de ese corte (los meses entre la llegada del pedido y la llegada del pedido de la ventana siguiente, con lead time de ${config.lead_time_months} meses). Se compara contra lo que pasó realmente.`,
     "",
     "- **WAPE** = Σ|pronóstico − real| / Σ real. Menor es mejor. **Sesgo** = (Σ pronóstico − Σ real) / Σ real; negativo = sub-pronóstico.",
     "- **Ventas reales**: ventas netas sin flotas extraordinarias. Están recortadas cuando hubo quiebre de stock.",

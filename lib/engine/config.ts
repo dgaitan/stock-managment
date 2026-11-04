@@ -1,7 +1,10 @@
 import { readFileSync } from "node:fs";
 import { parse } from "yaml";
+import { type CycleRuleRow, PERMANENT_CYCLE } from "@/lib/engine/rules";
 
 // Pura, sin Next/React/DB. El motor y el CLI leen la config de aqui.
+// Solo supuestos de pronóstico: lo que cambia por ciclo (corte, ventana, llegada,
+// lotes, regla RAV4) sale de los datos y de las reglas (ver cycle.ts y rules.ts).
 export interface ModelConfig {
   name: string;
   lot_min: number;
@@ -13,9 +16,7 @@ export interface ModelConfig {
 
 export interface CycleConfig {
   lead_time_months: number;
-  order_coverage_months: number;
-  cutoff_date: string;
-  order_window_closes: string;
+  window_months: number[]; // meses (1-12) en que fábrica recibe pedidos
   fleet_outlier_min_units: number;
   min_order_effective_threshold_pct: number;
   stockout_min_stock_fraction: number;
@@ -32,11 +33,29 @@ export interface CycleConfig {
   plan_piso_monthly_pct: number;
   aging_discounts: Record<string, number>;
   loss_reason_categories: string[];
-  models: ModelConfig[];
   backtest_cutoffs: string[];
 }
 
 export function loadCycleConfig(path = "config/cycle.yaml"): CycleConfig {
   const raw = readFileSync(path, "utf-8");
   return parse(raw) as CycleConfig;
+}
+
+/**
+ * Reglas semilla (lotes de los comunicados, regla RAV4) como filas de `cycle_rules`.
+ * Formato del archivo: `<ciclo | permanent>: { <modelo>: { <clave>: <valor> } }`.
+ * Hasta que el motor lea de la base, los scripts de xlsx cargan las reglas de aquí.
+ */
+export function loadCycleRules(path = "config/cycle_rules.yaml"): CycleRuleRow[] {
+  const tree = parse(readFileSync(path, "utf-8")) as Record<string, Record<string, Record<string, unknown>>>;
+  const rows: CycleRuleRow[] = [];
+  for (const [cycle, models] of Object.entries(tree)) {
+    if (cycle !== PERMANENT_CYCLE && !/^\d{4}-\d{2}$/.test(cycle)) {
+      throw new Error(`Ciclo inválido en ${path}: "${cycle}" (use "permanent" o "AAAA-MM")`);
+    }
+    for (const [model, rules] of Object.entries(models)) {
+      for (const [key, value] of Object.entries(rules)) rows.push({ cycle, model, key, value: String(value) });
+    }
+  }
+  return rows;
 }

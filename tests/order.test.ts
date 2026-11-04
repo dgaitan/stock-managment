@@ -7,6 +7,7 @@ import {
   roundToLot,
 } from "@/lib/engine/order";
 import type { CycleConfig, ModelConfig } from "@/lib/engine/config";
+import { deriveCycle } from "@/lib/engine/cycle";
 import type { NormalizedFactoryOrder, NormalizedInventorySnapshot, NormalizedSale } from "@/lib/sources/types";
 
 const HILUX: ModelConfig = { name: "Hilux", lot_min: 12, lot_multiple: 6 };
@@ -19,11 +20,11 @@ const RAV4: ModelConfig = {
   safety_stock_override: 0,
 };
 
+const CYCLE = deriveCycle({ cutoffDate: "2026-09-30", leadTimeMonths: 4, windowMonths: [1, 4, 7, 10] });
+
 const BASE_CONFIG: CycleConfig = {
   lead_time_months: 4,
-  order_coverage_months: 3,
-  cutoff_date: "2026-09-30",
-  order_window_closes: "2026-10-30",
+  window_months: [1, 4, 7, 10],
   fleet_outlier_min_units: 10,
   min_order_effective_threshold_pct: 0.5,
   stockout_min_stock_fraction: 0.5,
@@ -40,7 +41,6 @@ const BASE_CONFIG: CycleConfig = {
   plan_piso_monthly_pct: 0.009,
   aging_discounts: { "180": 0.04, "270": 0.07, "365": 0.1 },
   loss_reason_categories: ["stock", "price", "financing", "competitor", "postponed", "no_followup"],
-  models: [HILUX, RAV4],
   backtest_cutoffs: [],
 };
 
@@ -190,6 +190,7 @@ describe("computeModelOrderPlan", () => {
     ];
     const plan = computeModelOrderPlan({
       config: BASE_CONFIG,
+      cycle: CYCLE,
       model: HILUX,
       economics,
       sales,
@@ -205,13 +206,14 @@ describe("computeModelOrderPlan", () => {
     expect(plan.forecastMonthlyRate).toBeLessThan(60);
   });
 
-  it("el stock proyectado a febrero no es negativo y la demanda sin stock no infla el pedido", () => {
+  it("el stock proyectado al mes de llegada no es negativo y la demanda sin stock no infla el pedido", () => {
     // demanda ~20 u/mes constante, sin patio ni transito: oct-ene se pierde entera
     const sales = ["01", "02", "03", "04", "05", "06", "07", "08", "09"].map((mm) =>
       sale({ date: `2026-${mm}-15`, units: 20 }),
     );
     const plan = computeModelOrderPlan({
       config: BASE_CONFIG,
+      cycle: CYCLE,
       model: HILUX,
       economics,
       sales,
@@ -219,9 +221,9 @@ describe("computeModelOrderPlan", () => {
       inventory: [],
       factoryOrders: [],
     });
-    expect(plan.projectedStockFeb).toBe(0);
-    expect(plan.unmetDemandOctEne).toBeGreaterThan(0);
-    // necesidad = demanda de cobertura + colchon, sin sumar la demanda perdida de oct-ene
+    expect(plan.projectedStockAtArrival).toBe(0);
+    expect(plan.unmetDemandGap).toBeGreaterThan(0);
+    // necesidad = demanda de cobertura + colchon, sin sumar la demanda perdida hasta la llegada
     expect(plan.need).toBeCloseTo(plan.demandCoverageWindow + plan.safetyStockUnits, 6);
   });
 
@@ -240,6 +242,7 @@ describe("computeModelOrderPlan", () => {
     }));
     const plan = computeModelOrderPlan({
       config: BASE_CONFIG,
+      cycle: CYCLE,
       model: HILUX,
       economics,
       sales,
@@ -255,6 +258,7 @@ describe("computeModelOrderPlan", () => {
     const sales = [sale({ date: "2026-06-15", units: 4, modelName: "RAV4", modelNameRaw: "RAV4" })];
     const plan = computeModelOrderPlan({
       config: BASE_CONFIG,
+      cycle: CYCLE,
       model: RAV4,
       economics: { unitCost: 38000, marginPct: 0.1, monthlyFinCost: 350 },
       sales,

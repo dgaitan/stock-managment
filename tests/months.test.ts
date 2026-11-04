@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { addMonths, compareMonthKeys, monthKey, monthOfYear, monthRange, yearOf } from "@/lib/engine/months";
+import { addMonths, compareMonthKeys, monthKey, monthOfYear, monthRange, monthsBetween, yearOf } from "@/lib/engine/months";
+
+describe("monthsBetween", () => {
+  it("cuenta meses completos entre dos claves, con signo", () => {
+    expect(monthsBetween("2026-09", "2027-02")).toBe(5);
+    expect(monthsBetween("2026-10", "2026-10")).toBe(0);
+    expect(monthsBetween("2027-02", "2026-09")).toBe(-5);
+  });
+});
 
 describe("months", () => {
   it("extrae la clave de mes de una fecha ISO", () => {

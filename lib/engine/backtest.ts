@@ -4,6 +4,7 @@
 // corte) contra lo que realmente pasó. Ver docs/PLAN.md, paso 9.
 
 import type { CycleConfig, ModelConfig } from "@/lib/engine/config";
+import { type Cycle, deriveCycle } from "@/lib/engine/cycle";
 import { computeMonthlyCorrectedDemand } from "@/lib/engine/demand";
 import { addMonths, monthKey, monthRange } from "@/lib/engine/months";
 import { computeModelOrderPlan, type ModelEconomics } from "@/lib/engine/order";
@@ -64,22 +65,28 @@ export function naiveMonthlyRate(modelName: string, sales: NormalizedSale[], cut
  */
 export function runBacktest(params: {
   config: CycleConfig;
+  models: ModelConfig[];
   data: BacktestData;
   economicsByModel: Map<string, ModelEconomics>;
   dataEndMonth: string;
 }): BacktestRow[] {
-  const { config, data, economicsByModel, dataEndMonth } = params;
+  const { config, models, data, economicsByModel, dataEndMonth } = params;
   const rows: BacktestRow[] = [];
 
   for (const cutoff of config.backtest_cutoffs) {
     const known = sliceDataAtCutoff(data, cutoff);
     const cutoffMonth = monthKey(cutoff);
-    const cutoffConfig: CycleConfig = { ...config, cutoff_date: cutoff };
+    const cycle = deriveCycle({
+      cutoffDate: cutoff,
+      leadTimeMonths: config.lead_time_months,
+      windowMonths: config.window_months,
+    });
 
-    for (const model of config.models) {
+    for (const model of models) {
       rows.push(
         backtestModel({
-          config: cutoffConfig,
+          config,
+          cycle,
           model,
           known,
           full: data,
@@ -96,6 +103,7 @@ export function runBacktest(params: {
 
 function backtestModel(params: {
   config: CycleConfig;
+  cycle: Cycle;
   model: ModelConfig;
   known: BacktestData;
   full: BacktestData;
@@ -104,9 +112,9 @@ function backtestModel(params: {
   cutoffMonth: string;
   dataEndMonth: string;
 }): BacktestRow {
-  const { config, model, known, full, economics, cutoff, cutoffMonth, dataEndMonth } = params;
+  const { config, cycle, model, known, full, economics, cutoff, cutoffMonth, dataEndMonth } = params;
 
-  const plan = computeModelOrderPlan({ config, model, economics, ...known });
+  const plan = computeModelOrderPlan({ config, cycle, model, economics, ...known });
   const available = plan.coverageMonths.filter((m) => m <= dataEndMonth);
   const availableSet = new Set(available);
 

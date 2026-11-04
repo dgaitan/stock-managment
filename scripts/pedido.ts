@@ -1,16 +1,6 @@
-import { loadCycleConfig } from "@/lib/engine/config";
 import { explainOrder } from "@/lib/engine/explain";
-import { computeModelOrderPlan, type ModelEconomics } from "@/lib/engine/order";
-import { parseExcelFile } from "@/lib/sources/excel";
-import type { NormalizedModelEconomics } from "@/lib/sources/types";
-
-function toModelEconomics(raw: NormalizedModelEconomics | undefined): ModelEconomics {
-  return {
-    unitCost: raw?.avgUnitCost ?? 0,
-    marginPct: raw?.marginPct ?? 0,
-    monthlyFinCost: raw?.monthlyFinCostPerUnit ?? 0,
-  };
-}
+import { computeModelOrderPlan } from "@/lib/engine/order";
+import { loadCaseContext } from "./caseContext";
 
 function formatMoney(value: number): string {
   return `$${Math.round(value).toLocaleString("es-NI")}`;
@@ -18,21 +8,15 @@ function formatMoney(value: number): string {
 
 function main() {
   const filePath = process.argv[2] ?? "data/seed/caso1.xlsx";
-  const config = loadCycleConfig();
-  const canonicalModels = config.models.map((m) => m.name);
+  const { config, parsed, cycle, models, economicsByModel } = loadCaseContext(filePath);
+  const zero = { unitCost: 0, marginPct: 0, monthlyFinCost: 0 };
 
-  const parsed = parseExcelFile(filePath, canonicalModels, {
-    fleetOutlierMinUnits: config.fleet_outlier_min_units,
-  });
-  const economicsByModel = new Map(
-    parsed.economics.filter((e) => e.modelName).map((e) => [e.modelName as string, e]),
-  );
-
-  const plans = config.models.map((model) =>
+  const plans = models.map((model) =>
     computeModelOrderPlan({
       config,
+      cycle,
       model,
-      economics: toModelEconomics(economicsByModel.get(model.name)),
+      economics: economicsByModel.get(model.name) ?? zero,
       sales: parsed.sales,
       leads: parsed.leads,
       inventory: parsed.inventory,
@@ -40,12 +24,14 @@ function main() {
     }),
   );
 
-  console.log(`--- Pedido sugerido (corte ${config.cutoff_date}, ventana cierra ${config.order_window_closes}) ---`);
+  console.log(
+    `--- Pedido sugerido (corte ${cycle.cutoffDate}, ventana ${cycle.window} cierra ${cycle.windowCloses}, llega ${cycle.arrivalMonth}) ---`,
+  );
   console.table(
     plans.map((p) => ({
       Modelo: p.modelName,
       "Demanda u/mes": p.forecastMonthlyRate.toFixed(1),
-      "Stock proy. feb": p.projectedStockFeb.toFixed(1),
+      [`Stock proy. ${cycle.arrivalMonth}`]: p.projectedStockAtArrival.toFixed(1),
       Necesidad: p.need.toFixed(1),
       Pedido: p.orderUnits,
       Capital: formatMoney(p.capital),

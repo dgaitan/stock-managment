@@ -122,9 +122,7 @@ describe("computeErrorMetrics", () => {
 describe("runBacktest", () => {
   const config = {
     lead_time_months: 4,
-    order_coverage_months: 3,
-    cutoff_date: "2026-09-30",
-    order_window_closes: "2026-10-30",
+    window_months: [1, 4, 7, 10],
     fleet_outlier_min_units: 10,
     min_order_effective_threshold_pct: 0.5,
     stockout_min_stock_fraction: 0.5,
@@ -141,9 +139,10 @@ describe("runBacktest", () => {
     plan_piso_monthly_pct: 0.009,
     aging_discounts: {},
     loss_reason_categories: [],
-    models: [{ name: "Hilux", lot_min: 12, lot_multiple: 6 }],
     backtest_cutoffs: ["2026-03-31"],
   } as CycleConfig;
+
+  const models = [{ name: "Hilux", lot_min: 12, lot_multiple: 6 }];
 
   // 10 u/mes de ene-2025 a sep-2026
   const months = Array.from({ length: 21 }, (_, i) => {
@@ -159,7 +158,7 @@ describe("runBacktest", () => {
 
   it("evalúa la ventana de cobertura del corte y marca como parcial la que excede los datos", () => {
     // corte mar-2026: ventana ago-oct 2026, pero los datos terminan en sep-2026
-    const [row] = runBacktest({ config, data, economicsByModel: new Map(), dataEndMonth: "2026-09" });
+    const [row] = runBacktest({ config, models, data, economicsByModel: new Map(), dataEndMonth: "2026-09" });
     expect(row.months).toEqual(["2026-08", "2026-09"]);
     expect(row.partial).toBe(true);
     expect(row.actualSales).toBe(20);
@@ -170,17 +169,17 @@ describe("runBacktest", () => {
   it("la demanda corregida real suma los leads perdidos por stock de la ventana", () => {
     // 2 leads perdidos por falta de stock en agosto; la tasa de cierre del modelo es 0 (no hay ganadas)
     const withLost: BacktestData = { ...data, leads: [lead("2026-08-10"), lead("2026-08-12")] };
-    const [row] = runBacktest({ config, data: withLost, economicsByModel: new Map(), dataEndMonth: "2026-09" });
+    const [row] = runBacktest({ config, models, data: withLost, economicsByModel: new Map(), dataEndMonth: "2026-09" });
     expect(row.actualCorrected).toBe(20); // sin ganadas la tasa de cierre es 0: no suma nada extra
     const won = { ...lead("2026-08-14"), result: "Ganada", lossReasonCategory: null };
     const withWon: BacktestData = { ...data, leads: [lead("2026-08-10"), lead("2026-08-12"), won] };
-    const [rowWon] = runBacktest({ config, data: withWon, economicsByModel: new Map(), dataEndMonth: "2026-09" });
+    const [rowWon] = runBacktest({ config, models, data: withWon, economicsByModel: new Map(), dataEndMonth: "2026-09" });
     expect(rowWon.actualCorrected).toBeGreaterThan(20); // 2 perdidas x (1/3 de cierre)
   });
 
   it("no usa ventas posteriores al corte para pronosticar", () => {
     const withBoom: BacktestData = { ...data, sales: [...data.sales, sale("2026-08-20", 500)] };
-    const [row] = runBacktest({ config, data: withBoom, economicsByModel: new Map(), dataEndMonth: "2026-09" });
+    const [row] = runBacktest({ config, models, data: withBoom, economicsByModel: new Map(), dataEndMonth: "2026-09" });
     expect(row.forecast).toBeCloseTo(20, 5); // el pico de agosto es futuro al corte de marzo
     expect(row.actualSales).toBe(520);
   });

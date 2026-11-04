@@ -35,6 +35,10 @@ export function formatMonthRangeLabel(months: string[]): string {
   return `${monthLabel(first)}-${monthLabel(last)} ${year}`;
 }
 
+function monthLabelWithYear(key: string): string {
+  return `${monthLabel(key)} ${key.slice(0, 4)}`;
+}
+
 function round1(value: number): number {
   return Math.round(value * 10) / 10;
 }
@@ -69,13 +73,13 @@ export function explainOrder(plan: ModelOrderPlan): string {
 
   parts.push(
     `Con ${plan.patioAtCutoff} u. en patio y ${plan.transitoAtCutoff} u. en tránsito al corte, y una demanda ` +
-      `estimada de ${round1(plan.demandOctEne)} u. hasta que llegue el pedido de enero, el stock proyectado a ` +
-      `febrero es de ${round1(plan.projectedStockFeb)} u.`,
+      `estimada de ${round1(plan.demandGap)} u. hasta que llegue este pedido (${monthLabelWithYear(plan.arrivalMonth)}), el stock proyectado a ` +
+      `esa fecha es de ${round1(plan.projectedStockAtArrival)} u.`,
   );
 
-  if (plan.unmetDemandOctEne > 0) {
+  if (plan.unmetDemandGap > 0) {
     parts.push(
-      `Sin stock suficiente, ~${round1(plan.unmetDemandOctEne)} u. de esa demanda no se podrán atender antes de febrero; ` +
+      `Sin stock suficiente, ~${round1(plan.unmetDemandGap)} u. de esa demanda no se podrán atender antes de ${monthLabelWithYear(plan.arrivalMonth)}; ` +
         "se consideran ventas perdidas y no se suman al pedido.",
     );
   }

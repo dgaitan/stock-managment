@@ -4,22 +4,22 @@
 // Uso: bun run crosscheck [-- archivo.xlsx]. Sale con código 1 si algo no cuadra.
 
 import * as XLSX from "xlsx";
-import { loadCycleConfig } from "@/lib/engine/config";
 import { computeModelOrderPlan, type ModelOrderPlan } from "@/lib/engine/order";
-import { parseExcelFile } from "@/lib/sources/excel";
+import { loadCaseContext } from "./caseContext";
 
 type Row = Record<string, string | number>;
 const file = process.argv[2] ?? "data/seed/caso1.xlsx";
 const wb = XLSX.readFile(file);
 const sheet = (name: string) => XLSX.utils.sheet_to_json<Row>(wb.Sheets[name], { raw: true });
 
-const config = loadCycleConfig();
-const MODELS = config.models.map((m) => m.name);
-const CUTOFF = config.cutoff_date;
+const { config, parsed, cycle, models, economicsByModel } = loadCaseContext(file);
+const MODELS = models.map((m) => m.name);
 
 // --- limpieza mínima propia ---
 const serialToIso = (n: number) => new Date(Math.round((n - 25569) * 86400000)).toISOString().slice(0, 10);
 const monthOf = (iso: string) => iso.slice(0, 7);
+// el corte es el último cierre de la hoja Inventario (el motor lo deriva de los datos normalizados)
+const CUTOFF = serialToIso(Math.max(...sheet("Inventario").map((r) => Number(r["Mes (cierre)"]))));
 const canon = new Map(MODELS.map((m) => [m.toLowerCase(), m]));
 function model(raw: unknown): string | null {
   const key = String(raw ?? "").trim().replace(/\s+/g, " ").replace(/^toyota\s+/i, "").toLowerCase();
@@ -135,14 +135,11 @@ for (const m of MODELS) {
 }
 
 // --- motor ---
-const parsed = parseExcelFile(file, MODELS, { fleetOutlierMinUnits: config.fleet_outlier_min_units });
-const econ = new Map(parsed.economics.filter((e) => e.modelName).map((e) => [e.modelName as string, e]));
 const plans = new Map<string, ModelOrderPlan>(
-  config.models.map((model) => {
-    const e = econ.get(model.name);
-    const economics = { unitCost: e?.avgUnitCost ?? 0, marginPct: e?.marginPct ?? 0, monthlyFinCost: e?.monthlyFinCostPerUnit ?? 0 };
+  models.map((model) => {
+    const economics = economicsByModel.get(model.name) ?? { unitCost: 0, marginPct: 0, monthlyFinCost: 0 };
     const { sales, leads, inventory, factoryOrders } = parsed;
-    return [model.name, computeModelOrderPlan({ config, model, economics, sales, leads, inventory, factoryOrders })];
+    return [model.name, computeModelOrderPlan({ config, cycle, model, economics, sales, leads, inventory, factoryOrders })];
   }),
 );
 
@@ -152,6 +149,14 @@ const checks: Check[] = [];
 const add = (check: string, independent: number | string, engine: number | string, tol = 0) =>
   checks.push({ check, independent, engine, ok: typeof independent === "number" && typeof engine === "number" ? Math.abs(independent - engine) <= tol : independent === engine });
 
+// ciclo: el corte sale de la hoja Inventario cruda; el cierre de la ventana, del texto del comunicado de la gerencia
+const SPANISH_MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+const closeMatch = /ventana que cierra el (\d{1,2}) de (\w+) de (\d{4})/i.exec(sheet("Comunicados").map((r) => String(r["Texto"])).join("\n"));
+const bulletinClose = closeMatch
+  ? `${closeMatch[3]}-${String(SPANISH_MONTHS.indexOf(closeMatch[2].toLowerCase()) + 1).padStart(2, "0")}-${closeMatch[1].padStart(2, "0")}`
+  : "sin comunicado";
+add("Corte del ciclo (último cierre de Inventario)", CUTOFF, cycle.cutoffDate);
+add("Cierre de la ventana vs comunicado de la gerencia", bulletinClose, cycle.windowCloses);
 add("Facturas duplicadas eliminadas", duplicates, parsed.stats.ventasDuplicadosEliminados);
 add("Notas de crédito aplicadas", creditNotes, parsed.stats.ventasNotasCreditoAplicadas);
 add("Leads duplicados eliminados", rawLeads.length - leads.length, parsed.stats.leadsDuplicadosEliminados);

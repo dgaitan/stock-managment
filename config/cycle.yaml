@@ -1,10 +1,9 @@
-# Supuestos del motor de pedido. Todo lo que el motor usa para decidir sale de
-# aqui, nunca hardcodeado en lib/engine. Ver docs/PLAN.md "Supuestos".
+# Supuestos de pronostico del motor de pedido. El ciclo (corte, ventana, llegada) sale de los
+# datos y los lotes/RAV4 de config/cycle_rules.yaml.
+# Nada se hardcodea en lib/engine. Ver docs/PLAN.md "Supuestos".
 
 lead_time_months: 4 # comunicado de fabrica + ~108 dias reales (94-171)
-order_coverage_months: 3 # feb-abr: hasta que llegue el pedido de enero
-cutoff_date: "2026-09-30"
-order_window_closes: "2026-10-30"
+window_months: [1, 4, 7, 10] # ventanas trimestrales (ene, abr, jul, oct) del comunicado de fabrica
 
 fleet_outlier_min_units: 10 # linea >= 10 unidades de Flota/Institucional se excluye de demanda base
 
@@ -43,44 +42,6 @@ loss_reason_categories:
   - competitor
   - postponed
   - no_followup
-
-models:
-  - name: Hilux
-    lot_min: 12
-    lot_multiple: 6
-  - name: Fortuner
-    lot_min: 8
-    lot_multiple: 4
-  - name: Corolla
-    lot_min: 6
-    lot_multiple: 6
-  - name: Corolla Cross
-    lot_min: 12
-    lot_multiple: 6
-  - name: Yaris
-    lot_min: 16
-    lot_multiple: 8
-  - name: Yaris Cross
-    lot_min: 12
-    lot_multiple: 6
-  - name: RAV4
-    lot_min: 4
-    lot_multiple: 4
-    lifecycle: last_window
-    horizon_months: 3 # solo feb-abr (3 meses), sin seguridad (nueva generacion may-2027)
-    safety_stock_override: 0
-  - name: Land Cruiser Prado
-    lot_min: 2
-    lot_multiple: 2
-  - name: Rush
-    lot_min: 8
-    lot_multiple: 4
-  - name: Hiace
-    lot_min: 3
-    lot_multiple: 3
-  - name: Raize
-    lot_min: 12
-    lot_multiple: 6
 
 backtest_cutoffs:
   - "2025-06-30"

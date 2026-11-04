@@ -1,0 +1,24 @@
+# Reglas extraidas de los comunicados de fabrica. Es la semilla de la tabla cycle_rules:
+# `bun run seed` la escribe en la base y el motor resuelve las vigentes por ciclo.
+# Formato: <ciclo | permanent>: { <modelo>: { <clave>: <valor> } }
+# Claves que el motor entiende: lot_min, lot_multiple, lifecycle, horizon_months,
+# safety_stock_override. Una clave desconocida es un error, no se ignora.
+
+# Comunicado 2025-06-03 "Lotes de produccion y pedido minimo por modelo" (vigente desde jul-2025)
+permanent:
+  Hilux: { lot_min: 12, lot_multiple: 6 }
+  Fortuner: { lot_min: 8, lot_multiple: 4 }
+  Corolla: { lot_min: 6, lot_multiple: 6 }
+  Corolla Cross: { lot_min: 12, lot_multiple: 6 }
+  Yaris: { lot_min: 16, lot_multiple: 8 }
+  Yaris Cross: { lot_min: 12, lot_multiple: 6 }
+  RAV4: { lot_min: 4, lot_multiple: 4 }
+  Land Cruiser Prado: { lot_min: 2, lot_multiple: 2 }
+  Rush: { lot_min: 8, lot_multiple: 4 }
+  Hiace: { lot_min: 3, lot_multiple: 3 }
+  Raize: { lot_min: 12, lot_multiple: 6 }
+
+# Comunicado 2026-09-15 "Lanzamiento de la nueva generacion RAV4": la ventana de oct-2026 es
+# la ultima de la generacion actual y lo no vendido no tiene apoyo de liquidacion -> sin colchon.
+"2026-10":
+  RAV4: { lifecycle: last_window, safety_stock_override: 0 }

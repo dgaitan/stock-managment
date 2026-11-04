@@ -36,3 +36,8 @@ export function monthRange(start: string, count: number): string[] {
 export function compareMonthKeys(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
+
+/** Meses completos de `from` a `to` ("2026-09" -> "2027-02" = 5; negativo si `to` es anterior). */
+export function monthsBetween(from: string, to: string): number {
+  return (yearOf(to) - yearOf(from)) * 12 + (monthOfYear(to) - monthOfYear(from));
+}

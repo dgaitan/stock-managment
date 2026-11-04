@@ -1,14 +1,15 @@
 // Puro, sin Next/React/DB. Orquesta demand + forecast para calcular el
-// pedido por modelo: proyecta el stock a febrero, calcula la necesidad
-// para la ventana de cobertura, aplica el colchón de seguridad y
+// pedido por modelo: proyecta el stock al mes de llegada, calcula la
+// necesidad para la ventana de cobertura, aplica el colchón de seguridad y
 // redondea al mínimo/múltiplo de lote. Ver docs/PLAN.md "Lógica del
 // motor de pedido", pasos 6-8.
 
 import type { CycleConfig, ModelConfig } from "@/lib/engine/config";
+import type { Cycle } from "@/lib/engine/cycle";
 import { computeMonthlyCorrectedDemand, monthsThroughCutoff } from "@/lib/engine/demand";
 import { computeForecast } from "@/lib/engine/forecast";
 import { imputeStockoutDemand } from "@/lib/engine/imputation";
-import { addMonths, monthKey, monthRange } from "@/lib/engine/months";
+import { monthKey, monthRange } from "@/lib/engine/months";
 import { closingStockByMonth, computeAvgMonthlyNetSales } from "@/lib/engine/stockflow";
 import { groupTransitArrivals, isInTransitAtCutoff, projectStock } from "@/lib/engine/stockprojection";
 import type {
@@ -31,15 +32,16 @@ export interface ModelOrderPlan {
   forecastMonthlyRate: number;
   monthlyStdDev: number;
   hasSeasonalIndex: boolean;
-  forecastByMonth: Record<string, number>; // "YYYY-MM" -> unidades pronosticadas (oct-ene y ventana de cobertura)
-  octEneMonths: string[];
+  forecastByMonth: Record<string, number>; // "YYYY-MM" -> unidades pronosticadas (meses hasta la llegada y ventana de cobertura)
+  arrivalMonth: string; // mes en que llega este pedido
+  gapMonths: string[]; // meses entre el corte y la llegada del pedido
   coverageMonths: string[];
-  demandOctEne: number;
+  demandGap: number;
   demandCoverageWindow: number;
   patioAtCutoff: number;
   transitoAtCutoff: number;
-  projectedStockFeb: number;
-  unmetDemandOctEne: number; // demanda oct-ene que no se puede atender (se pierde, no se arrastra al pedido)
+  projectedStockAtArrival: number;
+  unmetDemandGap: number; // demanda hasta la llegada que no se puede atender (se pierde, no se arrastra al pedido)
   imputedStockoutMonths: number; // meses de quiebre cuya demanda se imputó al promedio sin quiebre
   safetyTier: SafetyTier;
   safetyStockUnits: number;
@@ -85,7 +87,7 @@ function safetyZ(tier: SafetyTier, safetyConfig: CycleConfig["safety_stock"]): n
   return safetyConfig.z_low_margin_or_high_fin_cost;
 }
 
-/** Unidades en patio y en tránsito del modelo al corte, para proyectar el stock a febrero. */
+/** Unidades en patio y en tránsito del modelo al corte, para proyectar el stock al mes de llegada. */
 export function computePatioAndTransito(params: {
   modelName: string;
   inventory: NormalizedInventorySnapshot[];
@@ -119,6 +121,7 @@ function sumForecast(forecastByMonth: Record<string, number>, months: string[]):
  */
 export function computeModelOrderPlan(params: {
   config: CycleConfig;
+  cycle: Cycle;
   model: ModelConfig;
   economics: ModelEconomics;
   sales: NormalizedSale[];
@@ -126,19 +129,18 @@ export function computeModelOrderPlan(params: {
   inventory: NormalizedInventorySnapshot[];
   factoryOrders: NormalizedFactoryOrder[];
 }): ModelOrderPlan {
-  const { config, model, economics, sales, leads, inventory, factoryOrders } = params;
+  const { config, cycle, model, economics, sales, leads, inventory, factoryOrders } = params;
 
-  const cutoffMonth = monthKey(config.cutoff_date);
-  const octEneMonths = monthRange(addMonths(cutoffMonth, 1), config.lead_time_months);
-  const febStart = addMonths(cutoffMonth, 1 + config.lead_time_months);
-  const coverageMonthsCount = model.horizon_months ?? config.order_coverage_months;
-  const coverageMonths = monthRange(febStart, coverageMonthsCount);
+  const gapMonths = cycle.gapMonths;
+  const coverageMonths =
+    model.horizon_months === undefined ? cycle.coverageMonths : monthRange(cycle.arrivalMonth, model.horizon_months);
+  const coverageMonthsCount = coverageMonths.length;
 
   const rawHistory = computeMonthlyCorrectedDemand(
     model.name,
     sales,
     leads,
-    monthsThroughCutoff(sales, cutoffMonth),
+    monthsThroughCutoff(sales, monthKey(cycle.cutoffDate)),
   );
   const { history, imputedMonths } = imputeStockoutDemand({
     history: rawHistory,
@@ -148,29 +150,29 @@ export function computeModelOrderPlan(params: {
   });
   const forecast = computeForecast({
     history,
-    targetMonths: [...octEneMonths, ...coverageMonths],
+    targetMonths: [...gapMonths, ...coverageMonths],
     weights: config.forecast_weights,
     minYearsForSeasonality: config.seasonality_min_years,
   });
 
-  const demandOctEne = sumForecast(forecast.forecastByMonth, octEneMonths);
+  const demandGap = sumForecast(forecast.forecastByMonth, gapMonths);
   const demandCoverageWindow = sumForecast(forecast.forecastByMonth, coverageMonths);
 
   const { patio, transito } = computePatioAndTransito({
     modelName: model.name,
     inventory,
     factoryOrders,
-    cutoffDate: config.cutoff_date,
+    cutoffDate: cycle.cutoffDate,
   });
   const transitArrivals = groupTransitArrivals({
     modelName: model.name,
     factoryOrders,
-    cutoffDate: config.cutoff_date,
-    months: octEneMonths,
+    cutoffDate: cycle.cutoffDate,
+    months: gapMonths,
   });
-  const { stockEnd: projectedStockFeb, unmetDemand: unmetDemandOctEne } = projectStock({
+  const { stockEnd: projectedStockAtArrival, unmetDemand: unmetDemandGap } = projectStock({
     startingStock: patio,
-    months: octEneMonths,
+    months: gapMonths,
     arrivalsByMonth: transitArrivals.byMonth,
     arrivalsAfterPeriod: transitArrivals.afterPeriod,
     forecastByMonth: forecast.forecastByMonth,
@@ -182,7 +184,7 @@ export function computeModelOrderPlan(params: {
       ? model.safety_stock_override
       : safetyZ(safetyTier, config.safety_stock) * forecast.monthlyStdDev * Math.sqrt(coverageMonthsCount);
 
-  const need = demandCoverageWindow + safetyStockUnits - projectedStockFeb;
+  const need = demandCoverageWindow + safetyStockUnits - projectedStockAtArrival;
   const orderUnits = computeOrderUnits(need, model, config.min_order_effective_threshold_pct);
 
   const capital = orderUnits * economics.unitCost;
@@ -206,14 +208,15 @@ export function computeModelOrderPlan(params: {
     monthlyStdDev: forecast.monthlyStdDev,
     hasSeasonalIndex: forecast.seasonalIndex !== null,
     forecastByMonth: forecast.forecastByMonth,
-    octEneMonths,
+    arrivalMonth: cycle.arrivalMonth,
+    gapMonths,
     coverageMonths,
-    demandOctEne,
+    demandGap,
     demandCoverageWindow,
     patioAtCutoff: patio,
     transitoAtCutoff: transito,
-    projectedStockFeb,
-    unmetDemandOctEne,
+    projectedStockAtArrival,
+    unmetDemandGap,
     imputedStockoutMonths: imputedMonths.length,
     safetyTier,
     safetyStockUnits,
