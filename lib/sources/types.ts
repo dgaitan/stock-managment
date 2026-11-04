@@ -90,6 +90,7 @@ export interface ImportStats {
   ventasFilasLeidas: number;
   ventasDuplicadosEliminados: number;
   ventasNotasCreditoAplicadas: number;
+  leadsDuplicadosEliminados: number;
 }
 
 export interface NormalizedImport {

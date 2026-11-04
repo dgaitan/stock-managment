@@ -47,8 +47,15 @@ const salesIn = (m: string, month: string, includeFleet = false) =>
       .map((r) => Number(r["Unidades"])),
   );
 
-// --- leads ---
-const leads = sheet("Leads");
+// --- leads: un ID Oportunidad repetido es la misma oportunidad ---
+const rawLeads = sheet("Leads");
+const seenLeadIds = new Set<string>();
+const leads = rawLeads.filter((l) => {
+  const id = String(l["ID Oportunidad"]);
+  if (seenLeadIds.has(id)) return false;
+  seenLeadIds.add(id);
+  return true;
+});
 const STOCK_REASON = /sin disponibilidad|sin inventario|sin stock|no hay unidades|no disponible/i;
 const closeRate = (m: string) => {
   const mine = leads.filter((l) => model(l["Modelo de interés"]) === m);
@@ -147,6 +154,7 @@ const add = (check: string, independent: number | string, engine: number | strin
 
 add("Facturas duplicadas eliminadas", duplicates, parsed.stats.ventasDuplicadosEliminados);
 add("Notas de crédito aplicadas", creditNotes, parsed.stats.ventasNotasCreditoAplicadas);
+add("Leads duplicados eliminados", rawLeads.length - leads.length, parsed.stats.leadsDuplicadosEliminados);
 add("Líneas de venta con modelo sin mapear", sales.filter((r) => !model(r["Modelo"])).length, parsed.stats.modelosNoMapeados.length);
 add("Modelos distintos tras normalizar", new Set(sales.map((r) => model(r["Modelo"])).filter(Boolean)).size, parsed.stats.modelosDetectados);
 add("Patio total al corte", sum(MODELS.map(yard)), sum([...plans.values()].map((p) => p.patioAtCutoff)));

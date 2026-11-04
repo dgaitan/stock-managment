@@ -83,6 +83,22 @@ function buildWorkbook() {
       "",
       "",
     ],
+    // misma oportunidad repetida: debe contarse una sola vez
+    [
+      "OPP-1",
+      45196,
+      45200,
+      "Managua",
+      "Ana",
+      "Individual",
+      "Corolla Cross",
+      "SEG",
+      1,
+      "Perdida",
+      "No hay unidades disponibles",
+      "",
+      "",
+    ],
   ]);
   XLSX.utils.book_append_sheet(wb, leads, "Leads");
 
@@ -185,6 +201,11 @@ describe("parseWorkbook", () => {
 
     expect(result.economics).toHaveLength(1);
     expect(result.economics[0].modelName).toBe("Hilux");
+  });
+
+  it("deduplica leads con el mismo ID Oportunidad", () => {
+    expect(result.leads).toHaveLength(1);
+    expect(result.stats.leadsDuplicadosEliminados).toBe(1);
   });
 
   it("cuenta los modelos detectados en ventas", () => {

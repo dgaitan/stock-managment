@@ -153,7 +153,17 @@ export function parseWorkbook(
   });
 
   // --- Leads ---
-  const leads: NormalizedLead[] = sheetRows(workbook, "Leads").map((row) => {
+  // Un ID Oportunidad repetido es la misma oportunidad: se conserva la primera
+  // fila para no contar dos veces una venta perdida o una sustitución.
+  const leadRows = sheetRows(workbook, "Leads");
+  const seenLeadIds = new Set<string>();
+  const uniqueLeadRows = leadRows.filter((row) => {
+    const id = toText(row["ID Oportunidad"]) ?? "";
+    if (seenLeadIds.has(id)) return false;
+    seenLeadIds.add(id);
+    return true;
+  });
+  const leads: NormalizedLead[] = uniqueLeadRows.map((row) => {
     const model = resolveModel(row["Modelo de interés"]);
     const boughtRaw = toText(row["Modelo comprado (si difiere)"]);
     const bought = boughtRaw ? resolveModel(boughtRaw) : null;
@@ -241,6 +251,7 @@ export function parseWorkbook(
     ventasFilasLeidas: ventasRows.length,
     ventasDuplicadosEliminados: duplicadosEliminados,
     ventasNotasCreditoAplicadas: notasCreditoAplicadas,
+    leadsDuplicadosEliminados: leadRows.length - uniqueLeadRows.length,
   };
 
   return { sales, inventory, leads, factoryOrders, bulletins, economics, stats };

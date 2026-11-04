@@ -31,6 +31,7 @@ async function main() {
   console.log(`Filas de venta leídas: ${parsed.stats.ventasFilasLeidas}`);
   console.log(`Duplicados eliminados: ${parsed.stats.ventasDuplicadosEliminados}`);
   console.log(`Notas de crédito aplicadas: ${parsed.stats.ventasNotasCreditoAplicadas}`);
+  console.log(`Leads duplicados eliminados: ${parsed.stats.leadsDuplicadosEliminados}`);
   console.log(`Ventas insertadas: ${facts.salesInserted}`);
   console.log(`Snapshots de inventario insertados: ${facts.inventoryInserted}`);
   console.log(`Leads insertados: ${facts.leadsInserted}`);
