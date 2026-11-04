@@ -8,10 +8,15 @@ Entrega: jueves 5 de noviembre de 2026, 6:00 p.m.
 - El motor (`lib/engine`) es TypeScript puro: sin imports de Next, React ni DB.
   Recibe datos normalizados y devuelve resultados. Todo parámetro sale de
   `config/cycle.yaml` (cargado vía `lib/engine/config.ts`), nunca hardcodeado.
-- La IA nunca decide cantidades. Solo sugiere mapeos de alias que el usuario
-  confirma (`lib/ai/mapper.ts`). El cálculo del pedido es 100% determinístico.
+- La IA nunca decide ni escribe cantidades. Puede (a) sugerir alias que el usuario
+  confirma (`lib/ai/mapper.ts`), (b) extraer reglas de los comunicados y traducir
+  las consideraciones del usuario a **parámetros acotados validados con zod**
+  (`lib/ai/rules.ts`), siempre con vista previa y confirmación, y (c) redactar el
+  análisis y el «por qué». El cálculo del pedido es 100% determinístico; una
+  regla que el motor no entiende se marca «no aplicada», nunca se ignora en
+  silencio. Ver `docs/PLAN.md` § «Flujo con IA».
 - La app debe funcionar sin `ANTHROPIC_API_KEY` (solo se pierden las sugerencias
-  automáticas de alias).
+  de alias, la extracción de reglas, la caja de consideraciones y la narrativa).
 - Ningún secreto en el código. Usa `.env` (ignorado) y `.env.example`.
 - Cada regla de negocio nueva lleva un test en `tests/`.
 - **Mensajes de commit en inglés** (asunto en imperativo, p. ej.
@@ -26,6 +31,13 @@ Entrega: jueves 5 de noviembre de 2026, 6:00 p.m.
   Docker.
 - Migraciones con `drizzle-kit` (`bun run db:generate` / `db:migrate`), nunca
   `CREATE TABLE` a mano.
+- Reglas del motor ya acordadas (no revertir sin preguntar): el stock proyectado
+  se simula mes a mes con las ETA y **nunca baja de 0** (la demanda sin stock se
+  pierde, no se suma al pedido); la sustitución suma la demanda al modelo que el
+  cliente quería; los meses de quiebre se imputan al promedio de los meses sin
+  quiebre. Detalle en `docs/PLAN.md` § «Lógica del motor».
+- El pedido es por modelo (lotes de fábrica). La mezcla por versión es una
+  sugerencia aparte, pendiente de confirmar; el color no entra al cálculo.
 - Idempotencia de importación por `line_hash` — reimportar el mismo Excel no
   duplica filas en `sales` / `factory_orders`.
 
@@ -53,6 +65,10 @@ violación que reporte. Una tarea con resultado FALLA no está terminada.
 - `bun run db:generate` / `bun run db:migrate` — migraciones Drizzle
 - `bun run seed` — carga `data/seed/caso1.xlsx` a la base
 - `bun run pedido -- <xlsx>` — CLI que imprime la tabla de pedido por modelo
+- `bun run backtest` — backtest con 4 cortes (WAPE por modelo); escribe `docs/BACKTEST.md`
+- `bun run crosscheck` — validación independiente: recalcula cifras clave desde el
+  xlsx crudo sin usar el motor y falla (código 1) si algo no cuadra. Es TypeScript,
+  no pandas. Córrelo después de cambiar el motor o la limpieza.
 
 ## Despliegue
 
