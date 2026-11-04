@@ -15,6 +15,7 @@ function basePlan(partial: Partial<ModelOrderPlan>): ModelOrderPlan {
     patioAtCutoff: 135,
     transitoAtCutoff: 103,
     projectedStockFeb: 178,
+    unmetDemandOctEne: 0,
     safetyTier: "high",
     safetyStockUnits: 8,
     need: -125,
@@ -45,6 +46,16 @@ describe("explainOrder", () => {
     expect(text).toContain("15 u/mes");
     expect(text).toContain("178");
     expect(text).toContain("pedido sugerido es 0 unidades");
+  });
+
+  it("avisa que la demanda sin stock se pierde y no se suma al pedido", () => {
+    const text = explainOrder(basePlan({ projectedStockFeb: 0, unmetDemandOctEne: 64.7 }));
+    expect(text).toContain("64.7");
+    expect(text).toContain("ventas perdidas");
+  });
+
+  it("no menciona ventas perdidas cuando todo se atiende", () => {
+    expect(explainOrder(basePlan({}))).not.toContain("ventas perdidas");
   });
 
   it("incluye unidades, capital y costo financiero cuando el pedido es > 0", () => {

@@ -8,6 +8,7 @@ import type { CycleConfig, ModelConfig } from "@/lib/engine/config";
 import { computeMonthlyCorrectedDemand } from "@/lib/engine/demand";
 import { computeForecast } from "@/lib/engine/forecast";
 import { addMonths, monthKey, monthRange } from "@/lib/engine/months";
+import { groupTransitArrivals, isInTransitAtCutoff, projectStock } from "@/lib/engine/stockprojection";
 import type {
   NormalizedFactoryOrder,
   NormalizedInventorySnapshot,
@@ -35,6 +36,7 @@ export interface ModelOrderPlan {
   patioAtCutoff: number;
   transitoAtCutoff: number;
   projectedStockFeb: number;
+  unmetDemandOctEne: number; // demanda oct-ene que no se puede atender (se pierde, no se arrastra al pedido)
   safetyTier: SafetyTier;
   safetyStockUnits: number;
   need: number;
@@ -96,9 +98,7 @@ export function computePatioAndTransito(params: {
 
   let transito = 0;
   for (const order of factoryOrders) {
-    if (order.modelName !== modelName || order.orderDate === null || order.orderDate > cutoffDate) continue;
-    const notYetReceived = order.receivedAt === null || order.receivedAt > cutoffDate;
-    if (notYetReceived) transito += order.units;
+    if (isInTransitAtCutoff(order, modelName, cutoffDate)) transito += order.units;
   }
 
   return { patio, transito };
@@ -147,7 +147,19 @@ export function computeModelOrderPlan(params: {
     factoryOrders,
     cutoffDate: config.cutoff_date,
   });
-  const projectedStockFeb = patio + transito - demandOctEne;
+  const transitArrivals = groupTransitArrivals({
+    modelName: model.name,
+    factoryOrders,
+    cutoffDate: config.cutoff_date,
+    months: octEneMonths,
+  });
+  const { stockEnd: projectedStockFeb, unmetDemand: unmetDemandOctEne } = projectStock({
+    startingStock: patio,
+    months: octEneMonths,
+    arrivalsByMonth: transitArrivals.byMonth,
+    arrivalsAfterPeriod: transitArrivals.afterPeriod,
+    forecastByMonth: forecast.forecastByMonth,
+  });
 
   const safetyTier = classifySafetyTier(economics, config.safety_stock);
   const safetyStockUnits =
@@ -184,6 +196,7 @@ export function computeModelOrderPlan(params: {
     patioAtCutoff: patio,
     transitoAtCutoff: transito,
     projectedStockFeb,
+    unmetDemandOctEne,
     safetyTier,
     safetyStockUnits,
     need,

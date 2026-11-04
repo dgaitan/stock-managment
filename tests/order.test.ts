@@ -201,6 +201,26 @@ describe("computeModelOrderPlan", () => {
     expect(plan.forecastMonthlyRate).toBeLessThan(60);
   });
 
+  it("el stock proyectado a febrero no es negativo y la demanda sin stock no infla el pedido", () => {
+    // demanda ~20 u/mes constante, sin patio ni transito: oct-ene se pierde entera
+    const sales = ["01", "02", "03", "04", "05", "06", "07", "08", "09"].map((mm) =>
+      sale({ date: `2026-${mm}-15`, units: 20 }),
+    );
+    const plan = computeModelOrderPlan({
+      config: BASE_CONFIG,
+      model: HILUX,
+      economics,
+      sales,
+      leads: [],
+      inventory: [],
+      factoryOrders: [],
+    });
+    expect(plan.projectedStockFeb).toBe(0);
+    expect(plan.unmetDemandOctEne).toBeGreaterThan(0);
+    // necesidad = demanda de cobertura + colchon, sin sumar la demanda perdida de oct-ene
+    expect(plan.need).toBeCloseTo(plan.demandCoverageWindow + plan.safetyStockUnits, 6);
+  });
+
   it("RAV4 (ultima ventana) usa colchon de seguridad 0 por su safety_stock_override", () => {
     const sales = [sale({ date: "2026-06-15", units: 4, modelName: "RAV4", modelNameRaw: "RAV4" })];
     const plan = computeModelOrderPlan({

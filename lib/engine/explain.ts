@@ -65,6 +65,13 @@ export function explainOrder(plan: ModelOrderPlan): string {
       `febrero es de ${round1(plan.projectedStockFeb)} u.`,
   );
 
+  if (plan.unmetDemandOctEne > 0) {
+    parts.push(
+      `Sin stock suficiente, ~${round1(plan.unmetDemandOctEne)} u. de esa demanda no se podrán atender antes de febrero; ` +
+        "se consideran ventas perdidas y no se suman al pedido.",
+    );
+  }
+
   parts.push(
     `La ventana de cobertura (${formatMonthRangeLabel(plan.coverageMonths)}) necesita ${round1(plan.demandCoverageWindow)} u., ` +
       `más un colchón de seguridad de ${round1(plan.safetyStockUnits)} u. (nivel ${plan.safetyTier}), para una ` +
