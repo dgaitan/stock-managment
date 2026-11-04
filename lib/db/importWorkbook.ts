@@ -4,8 +4,9 @@ import * as schema from "@/lib/db/schema";
 import { applyImport } from "@/lib/db/applyImport";
 import { buildFactRows, type Database } from "@/lib/db/factRows";
 import { diffImport } from "@/lib/db/importDiff";
-import { seedCatalog } from "@/lib/db/seedCatalog";
+import { seedCatalog, seedCycleRules } from "@/lib/db/seedCatalog";
 import type { CycleConfig } from "@/lib/engine/config";
+import { modelNamesFromRules, type CycleRuleRow } from "@/lib/engine/rules";
 import { isNoop, type ImportDiff } from "@/lib/import/diff";
 import type { NormalizedImport } from "@/lib/sources/types";
 
@@ -46,7 +47,7 @@ export async function previewImport(db: Database, parsed: NormalizedImport, file
 }
 
 /**
- * Confirma la importación en una sola transacción: catálogo, hechos y registro
+ * Confirma la importación en una sola transacción: catálogo, reglas, hechos y registro
  * en `imports`. Si algo falla no queda nada a medias. El registro guarda el diff
  * calculado dentro de la transacción (lo que de verdad se escribió), no el de
  * la vista previa, por si la base cambió entre ambos.
@@ -54,12 +55,14 @@ export async function previewImport(db: Database, parsed: NormalizedImport, file
 export async function commitImport(
   db: Database,
   config: CycleConfig,
+  rules: CycleRuleRow[],
   parsed: NormalizedImport,
   preview: Pick<ImportPreview, "fileSha256">,
   filename: string,
 ): Promise<{ importId: number; diff: ImportDiff }> {
   return db.transaction(async (tx) => {
-    await seedCatalog(tx, config, parsed);
+    await seedCatalog(tx, config, modelNamesFromRules(rules), parsed);
+    await seedCycleRules(tx, rules);
     const rows = await buildFactRows(tx, parsed);
     const diff = await diffImport(tx, rows, parsed.economics);
     await applyImport(tx, rows);

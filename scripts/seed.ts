@@ -1,9 +1,11 @@
 import "dotenv/config";
 import { readFileSync } from "node:fs";
 import { basename } from "node:path";
-import { loadCycleConfig } from "@/lib/engine/config";
+import { loadCycleConfig, loadCycleRules } from "@/lib/engine/config";
+import { modelNamesFromRules } from "@/lib/engine/rules";
 import { parseExcelFile } from "@/lib/sources/excel";
 import { db } from "@/lib/db/client";
+import { seedCycleRules } from "@/lib/db/seedCatalog";
 import { commitImport, previewImport } from "@/lib/db/importWorkbook";
 import type { ImportDiff } from "@/lib/import/diff";
 
@@ -19,8 +21,9 @@ const SHEET_LABELS: Record<keyof ImportDiff, string> = {
 async function main() {
   const filePath = process.argv[2] ?? "data/seed/caso1.xlsx";
   const config = loadCycleConfig();
+  const rules = loadCycleRules();
 
-  const parsed = parseExcelFile(filePath, config.models.map((m) => m.name), {
+  const parsed = parseExcelFile(filePath, modelNamesFromRules(rules), {
     fleetOutlierMinUnits: config.fleet_outlier_min_units,
   });
   const preview = await previewImport(db, parsed, readFileSync(filePath));
@@ -54,11 +57,16 @@ async function main() {
     console.log(`Este archivo ya se importó el ${preview.previousImportAt.toISOString()}.`);
   }
   if (preview.noop) {
-    console.log("Sin cambios: no se escribe nada.");
+    const addedRules = await seedCycleRules(db, rules);
+    console.log(
+      addedRules > 0
+        ? `Sin cambios en los datos; se agregaron ${addedRules} reglas de ciclo.`
+        : "Sin cambios: no se escribe nada.",
+    );
     process.exit(0);
   }
 
-  const { importId } = await commitImport(db, config, parsed, preview, basename(filePath));
+  const { importId } = await commitImport(db, config, rules, parsed, preview, basename(filePath));
   console.log(`Importación #${importId} confirmada.`);
   process.exit(0);
 }

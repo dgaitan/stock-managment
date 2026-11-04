@@ -1,5 +1,6 @@
 import type { Executor } from "@/lib/db/factRows";
 import type { CycleConfig } from "@/lib/engine/config";
+import type { CycleRuleRow } from "@/lib/engine/rules";
 import type { NormalizedImport } from "@/lib/sources/types";
 import * as schema from "@/lib/db/schema";
 
@@ -13,8 +14,8 @@ const LOSS_REASON_CATEGORY_LABELS: Record<string, string> = {
 };
 
 /**
- * Siembra el catálogo canónico: modelos (reglas de lote de cycle.yaml +
- * economía del Excel), sucursales, tipos de cliente, categorías de
+ * Siembra el catálogo canónico: modelos (economía del Excel; sus reglas de
+ * lote van aparte, en cycle_rules), sucursales, tipos de cliente, categorías de
  * motivo de pérdida y los alias (de modelo y de motivo) detectados en
  * la importación. Es seguro volver a correrlo: todo es upsert por la
  * clave natural de cada catálogo.
@@ -22,24 +23,22 @@ const LOSS_REASON_CATEGORY_LABELS: Record<string, string> = {
 export async function seedCatalog(
   db: Executor,
   config: CycleConfig,
+  modelNames: string[],
   parsed: NormalizedImport,
 ): Promise<{ modelIdByName: Map<string, number> }> {
   const economicsByModel = new Map(
     parsed.economics.filter((e) => e.modelName).map((e) => [e.modelName as string, e]),
   );
 
-  for (const model of config.models) {
-    const economics = economicsByModel.get(model.name);
+  for (const name of modelNames) {
+    const economics = economicsByModel.get(name);
     await db
       .insert(schema.models)
       .values({
-        name: model.name,
+        name,
         unitCost: String(economics?.avgUnitCost ?? 0),
         marginPct: String(economics?.marginPct ?? 0),
         monthlyFinCost: String(economics?.monthlyFinCostPerUnit ?? 0),
-        lotMin: model.lot_min,
-        lotMultiple: model.lot_multiple,
-        lifecycle: model.lifecycle ?? "active",
       })
       .onConflictDoUpdate({
         target: schema.models.name,
@@ -47,9 +46,6 @@ export async function seedCatalog(
           unitCost: String(economics?.avgUnitCost ?? 0),
           marginPct: String(economics?.marginPct ?? 0),
           monthlyFinCost: String(economics?.monthlyFinCostPerUnit ?? 0),
-          lotMin: model.lot_min,
-          lotMultiple: model.lot_multiple,
-          lifecycle: model.lifecycle ?? "active",
         },
       });
   }
@@ -128,6 +124,28 @@ export async function seedCatalog(
 
   // Los comunicados no son catálogo: los agrega applyImport sin borrar los existentes.
   return { modelIdByName };
+}
+
+/**
+ * Siembra las reglas por ciclo (lotes, RAV4) sin pisar lo que ya hay: una regla
+ * editada por el usuario se conserva. Devuelve cuántas reglas se agregaron.
+ */
+export async function seedCycleRules(db: Executor, rules: CycleRuleRow[]): Promise<number> {
+  const modelRows = await db.select({ id: schema.models.id, name: schema.models.name }).from(schema.models);
+  const modelIdByName = new Map(modelRows.map((m) => [m.name, m.id]));
+
+  let added = 0;
+  for (const rule of rules) {
+    const modelId = modelIdByName.get(rule.model);
+    if (modelId === undefined) throw new Error(`Regla para un modelo que no existe en el catálogo: ${rule.model}`);
+    const inserted = await db
+      .insert(schema.cycleRules)
+      .values({ cycle: rule.cycle, modelId, key: rule.key, value: rule.value, source: "bulletin" })
+      .onConflictDoNothing()
+      .returning({ id: schema.cycleRules.id });
+    added += inserted.length;
+  }
+  return added;
 }
 
 export function describeLossReasonCategory(category: string): string {

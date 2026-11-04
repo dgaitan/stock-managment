@@ -19,11 +19,6 @@ export const models = pgTable("models", {
   unitCost: numeric("unit_cost", { precision: 12, scale: 2 }).notNull(),
   marginPct: numeric("margin_pct", { precision: 5, scale: 4 }).notNull(),
   monthlyFinCost: numeric("monthly_fin_cost", { precision: 10, scale: 2 }).notNull(),
-  lotMin: integer("lot_min").notNull(),
-  lotMultiple: integer("lot_multiple").notNull(),
-  lifecycle: text("lifecycle", { enum: ["active", "last_window"] })
-    .notNull()
-    .default("active"),
 });
 
 export const modelAliases = pgTable(
@@ -164,14 +159,22 @@ export const bulletins = pgTable(
   (t) => [uniqueIndex("bulletins_date_subject_idx").on(t.date, t.subject)],
 );
 
-export const cycleRules = pgTable("cycle_rules", {
-  id: serial("id").primaryKey(),
-  cycle: text("cycle").notNull(),
-  modelId: integer("model_id").references(() => models.id),
-  key: text("key").notNull(),
-  value: text("value").notNull(),
-  source: text("source", { enum: ["bulletin", "user"] }).notNull(),
-});
+// Reglas por modelo (lotes, RAV4) de los comunicados vigentes. cycle = "permanent"
+// o la ventana ("2026-10"). Única fuente de lotes y ciclo de vida: ver lib/engine/rules.ts.
+export const cycleRules = pgTable(
+  "cycle_rules",
+  {
+    id: serial("id").primaryKey(),
+    cycle: text("cycle").notNull(),
+    modelId: integer("model_id")
+      .notNull()
+      .references(() => models.id),
+    key: text("key").notNull(),
+    value: text("value").notNull(),
+    source: text("source", { enum: ["bulletin", "user"] }).notNull(),
+  },
+  (t) => [uniqueIndex("cycle_rules_cycle_model_key_idx").on(t.cycle, t.modelId, t.key)],
+);
 
 // --- Importaciones y corridas de pedido ---
 
