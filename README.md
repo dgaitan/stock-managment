@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pedido Inteligente — Casa Pellas (Caso 1)
 
-## Getting Started
+Sistema que calcula el pedido trimestral a fábrica por modelo Toyota a partir
+de ventas, inventario, leads y comunicados. Contexto completo y supuestos en
+[`docs/PLAN.md`](docs/PLAN.md); reglas para trabajar en el repo en
+[`CLAUDE.md`](CLAUDE.md).
 
-First, run the development server:
+Datos del caso son ficticios y **no se publican** (repo privado / entrega en zip).
+
+## Stack
+
+Next.js (App Router) + TypeScript · shadcn/ui + Tailwind · Postgres (Drizzle)
+· Vitest. Local: Postgres instalado en la máquina (sin Docker). Producción:
+Vercel + Neon.
+
+## Correr en local
+
+Requiere Postgres corriendo en `localhost:5432` (p. ej. [Postgres.app](https://postgresapp.com)).
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+bun install
+createdb pedido_inteligente    # una vez, si la base no existe
+cp .env.example .env           # completar DATABASE_URL, SESSION_SECRET, ADMIN_PASSWORD
+bun run db:migrate
+bun run seed                   # carga data/seed/caso1.xlsx (no versionado)
+bun run dev                    # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Comandos
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Comando | Qué hace |
+| --- | --- |
+| `bun run dev` | Servidor de desarrollo |
+| `bun test` | Vitest — motor y limpieza |
+| `bun run db:generate` / `db:migrate` | Migraciones Drizzle |
+| `bun run seed` | Importa el Excel del caso a la base |
+| `bun run pedido -- <xlsx>` | CLI: imprime la tabla de pedido por modelo sin UI |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Despliegue (Vercel + Neon)
 
-## Learn More
+1. Crear un proyecto Postgres en [Neon](https://neon.tech) y copiar el
+   connection string **pooled**.
+2. En Vercel, configurar `DATABASE_URL`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`,
+   `SESSION_SECRET` (y `ANTHROPIC_API_KEY` si se quiere IA) como variables de
+   entorno del proyecto — nunca en el repo.
+3. `bun run db:migrate` contra el `DATABASE_URL` de Neon antes del primer deploy.
+4. Conectar el repo en Vercel y desplegar.
 
-To learn more about Next.js, take a look at the following resources:
+## Estructura
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Ver `docs/PLAN.md` § "Estructura del repositorio". El motor (`lib/engine`) es
+TypeScript puro y corre igual desde la UI o desde `scripts/pedido.ts` por CLI.

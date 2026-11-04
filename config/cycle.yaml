@@ -1,0 +1,80 @@
+# Supuestos del motor de pedido. Todo lo que el motor usa para decidir sale de
+# aqui, nunca hardcodeado en lib/engine. Ver docs/PLAN.md "Supuestos".
+
+lead_time_months: 4 # comunicado de fabrica + ~108 dias reales (94-171)
+order_coverage_months: 3 # feb-abr: hasta que llegue el pedido de enero
+cutoff_date: "2026-09-30"
+order_window_closes: "2026-10-30"
+
+fleet_outlier_min_units: 10 # linea >= 10 unidades de Flota/Institucional se excluye de demanda base
+
+lost_lead_close_rate_source: historical_model_win_rate # tasa de cierre del modelo, no 100%
+
+min_order_effective_threshold_pct: 0.5 # necesidad < 50% del minimo -> pedido 0
+
+forecast_weights:
+  recent_6m: 0.6
+  prior_6m: 0.4
+
+safety_stock:
+  z_high_margin: 1.65
+  z_mid_margin: 1.28
+  z_low_margin_or_high_fin_cost: 0.84
+
+plan_piso_monthly_pct: 0.009 # 0.9% mensual sobre costo
+aging_discounts:
+  "180": 0.04
+  "270": 0.07
+  "365": 0.10
+
+loss_reason_categories:
+  - stock
+  - price
+  - financing
+  - competitor
+  - postponed
+  - no_followup
+
+models:
+  - name: Hilux
+    lot_min: 12
+    lot_multiple: 6
+  - name: Fortuner
+    lot_min: 8
+    lot_multiple: 4
+  - name: Corolla
+    lot_min: 6
+    lot_multiple: 6
+  - name: Corolla Cross
+    lot_min: 12
+    lot_multiple: 6
+  - name: Yaris
+    lot_min: 16
+    lot_multiple: 8
+  - name: Yaris Cross
+    lot_min: 12
+    lot_multiple: 6
+  - name: RAV4
+    lot_min: 4
+    lot_multiple: 4
+    lifecycle: last_window
+    horizon_months: 2 # solo feb-abr, sin seguridad (nueva generacion may-2027)
+    safety_stock_override: 0
+  - name: Land Cruiser Prado
+    lot_min: 2
+    lot_multiple: 2
+  - name: Rush
+    lot_min: 8
+    lot_multiple: 4
+  - name: Hiace
+    lot_min: 3
+    lot_multiple: 3
+  - name: Raize
+    lot_min: 12
+    lot_multiple: 6
+
+backtest_cutoffs:
+  - "2025-06-30"
+  - "2025-09-30"
+  - "2025-12-31"
+  - "2026-03-31"
