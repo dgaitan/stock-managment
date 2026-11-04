@@ -9,18 +9,18 @@ import type {
   NormalizedSale,
 } from "@/lib/sources/types";
 
-export type EngineSale = Pick<NormalizedSale, "date" | "modelName" | "units" | "isFleetOutlier">;
+export type EngineSale = Pick<NormalizedSale, "date" | "modelName" | "version" | "units" | "isFleetOutlier">;
 
 export type EngineLead = Pick<
   NormalizedLead,
-  "closedAt" | "modelName" | "units" | "result" | "lossReasonCategory" | "boughtModelName"
+  "closedAt" | "modelName" | "version" | "units" | "result" | "lossReasonCategory" | "boughtModelName"
 >;
 
-export type EngineInventoryRow = Pick<NormalizedInventorySnapshot, "monthEnd" | "modelName" | "units">;
+export type EngineInventoryRow = Pick<NormalizedInventorySnapshot, "monthEnd" | "modelName" | "units" | "avgAgeDays">;
 
 export type EngineFactoryOrder = Pick<
   NormalizedFactoryOrder,
-  "modelName" | "orderDate" | "units" | "eta" | "receivedAt"
+  "modelName" | "version" | "orderDate" | "units" | "eta" | "receivedAt"
 >;
 
 export interface EngineData {

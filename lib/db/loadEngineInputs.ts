@@ -39,12 +39,14 @@ export async function loadEngineInputs(db: Database, config: CycleConfig = loadC
     sales: saleRows.map((s) => ({
       date: s.date,
       modelName: modelName(s.modelId),
+      version: s.version,
       units: s.units,
       isFleetOutlier: s.isFleetOutlier,
     })),
     leads: leadRows.map((l) => ({
       closedAt: l.closedAt,
       modelName: modelName(l.modelId),
+      version: l.version,
       units: l.units,
       result: l.result,
       lossReasonCategory: l.reasonId === null ? null : (categoryById.get(l.reasonId) ?? null),
@@ -52,11 +54,13 @@ export async function loadEngineInputs(db: Database, config: CycleConfig = loadC
     })),
     inventory: inventoryRows.map((i) => ({
       monthEnd: i.monthEnd,
+      avgAgeDays: i.avgAgeDays,
       modelName: modelName(i.modelId),
       units: i.units,
     })),
     factoryOrders: orderRows.map((o) => ({
       modelName: modelName(o.modelId),
+      version: o.version,
       orderDate: o.orderDate,
       units: o.units,
       eta: o.eta,

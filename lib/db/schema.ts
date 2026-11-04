@@ -111,6 +111,7 @@ export const leads = pgTable(
     createdAt: date("created_at"),
     closedAt: date("closed_at"),
     modelId: integer("model_id").references(() => models.id),
+    version: text("version"),
     units: integer("units").notNull().default(1),
     result: text("result"),
     reasonId: integer("reason_id").references(() => lossReasons.id),

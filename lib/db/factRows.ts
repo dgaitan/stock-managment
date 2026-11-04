@@ -76,6 +76,7 @@ export async function buildFactRows(db: Executor, parsed: NormalizedImport): Pro
     createdAt: lead.createdAt,
     closedAt: lead.closedAt,
     modelId: modelId(lead.modelName),
+    version: lead.version,
     units: lead.units,
     result: lead.result,
     reasonId: lead.lossReasonCategory ? (reasonIdByCategory.get(lead.lossReasonCategory) ?? null) : null,
