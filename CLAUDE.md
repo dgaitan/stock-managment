@@ -6,12 +6,15 @@ Entrega: jueves 5 de noviembre de 2026, 6:00 p.m.
 ## Reglas
 
 - El motor (`lib/engine`) es TypeScript puro: sin imports de Next, React ni DB.
-  Recibe datos normalizados y devuelve resultados. Ningún parámetro hardcodeado:
-  hoy salen de `config/cycle.yaml` (vía `lib/engine/config.ts`). **Acordado:** lo
-  que cambia por ciclo (corte, ventana, mes de llegada, lotes, regla RAV4) pasa a
-  derivarse de los datos y de los comunicados vigentes; el YAML queda solo con
-  supuestos de pronóstico (pesos, z, umbrales). No agregar fechas ni meses fijos
-  («febrero», «2026-10») en código nuevo.
+  Recibe datos normalizados y devuelve resultados. Ningún parámetro hardcodeado.
+  Lo que cambia por ciclo se **deriva**: corte, ventana, mes de llegada y cobertura
+  salen del último cierre de inventario (`lib/engine/cycle.ts`); lotes y regla RAV4
+  salen de las reglas vigentes (`lib/engine/rules.ts`, tabla `cycle_rules`, con
+  vigencia `permanent` o por ventana). `config/cycle.yaml` queda solo con supuestos
+  de pronóstico (pesos, z, umbrales, `window_months`). Hasta que el motor lea de la
+  base (Fase 4, paso 3), los scripts de xlsx cargan las reglas de
+  `config/cycle_rules.yaml`, que es también la semilla de `cycle_rules`. No agregar
+  fechas ni meses fijos («febrero», «2026-10») en código nuevo.
 - La IA nunca decide ni escribe cantidades. Puede (a) sugerir alias que el usuario
   confirma (`lib/ai/mapper.ts`), (b) extraer reglas de los comunicados y traducir
   las consideraciones del usuario a **parámetros acotados validados con zod**

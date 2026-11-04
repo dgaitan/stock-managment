@@ -7,7 +7,9 @@ parámetro o constante tiene una sola fuente de verdad.
 
 | Conocimiento | Única fuente |
 | --- | --- |
-| Parámetros del ciclo (horizonte, colchón, lotes, regla RAV4) | `config/cycle.yaml` vía `lib/engine/config.ts` |
+| Supuestos de pronóstico (pesos, z, umbrales, ventanas) | `config/cycle.yaml` vía `lib/engine/config.ts` |
+| Corte, ventana, llegada y cobertura del ciclo | `lib/engine/cycle.ts` (se derivan de los datos) |
+| Lotes y regla RAV4 | tabla `cycle_rules` (semilla: `config/cycle_rules.yaml`), resueltas por `lib/engine/rules.ts` |
 | Cálculo del pedido | `lib/engine/*` (la UI y la CLI lo consumen, no lo replican) |
 | Esquema de datos | `lib/db/schema.ts` (tipos con `InferSelectModel`/`z.infer`, no a mano) |
 | Validación de entrada | esquemas `zod`, compartidos entre cliente y servidor |
