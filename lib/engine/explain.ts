@@ -20,7 +20,7 @@ const SPANISH_MONTHS = [
   "dic",
 ];
 
-function monthLabel(key: string): string {
+export function monthLabel(key: string): string {
   const month = Number(key.slice(5, 7));
   return SPANISH_MONTHS[month - 1];
 }
@@ -47,11 +47,13 @@ function formatMoney(value: number): string {
   return Math.round(value).toLocaleString("es-NI");
 }
 
-const FLAG_LABELS: Record<string, string> = {
+export const FLAG_LABELS: Record<string, string> = {
   sin_historia_suficiente_para_estacionalidad: "sin suficiente historia para estacionalidad, pronóstico plano",
   ultima_ventana_de_generacion: "última ventana de esta generación, sin colchón de seguridad",
   necesidad_bajo_minimo_efectivo_pedido_cero: "necesidad bajo el mínimo efectivo, pedido ajustado a 0",
   sin_necesidad_pedido_cero: "sin necesidad neta, pedido en 0",
+  pedido_minimo_del_lote: "se pide el mínimo del lote",
+  demanda_imputada_por_quiebre: "demanda de meses de quiebre imputada al promedio sin quiebre",
 };
 
 /** Texto en español del "por qué" del pedido sugerido para un modelo. */

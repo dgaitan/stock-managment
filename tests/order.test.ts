@@ -28,6 +28,7 @@ const BASE_CONFIG: CycleConfig = {
   fleet_outlier_min_units: 10,
   min_order_effective_threshold_pct: 0.5,
   stockout_min_stock_fraction: 0.5,
+  version_mix_window_months: 12,
   forecast_weights: { recent_6m: 0.6, prior_6m: 0.4 },
   seasonality_min_years: 2,
   safety_stock: {
@@ -204,6 +205,33 @@ describe("computeModelOrderPlan", () => {
     }
     // la venta de flota (60 u) no debe inflar la tasa de demanda pronosticada
     expect(plan.forecastMonthlyRate).toBeLessThan(60);
+  });
+
+  it("avisa cuando el pedido se sube al mínimo del lote y no cuando la necesidad ya lo alcanza", () => {
+    const sales = [
+      sale({ date: "2025-06-15", units: 12 }),
+      sale({ date: "2025-12-15", units: 12 }),
+      sale({ date: "2026-06-15", units: 12 }),
+    ];
+    const plan = (model: ModelConfig) =>
+      computeModelOrderPlan({
+        config: { ...BASE_CONFIG, min_order_effective_threshold_pct: 0.01 },
+        cycle: CYCLE,
+        model,
+        economics,
+        sales,
+        leads: [],
+        inventory: [],
+        factoryOrders: [],
+      });
+
+    const raised = plan({ name: "Hilux", lot_min: 1000, lot_multiple: 6 });
+    expect(raised.orderUnits).toBe(1000 + (6 - (1000 % 6)) % 6);
+    expect(raised.flags).toContain("pedido_minimo_del_lote");
+
+    const natural = plan({ name: "Hilux", lot_min: 1, lot_multiple: 1 });
+    expect(natural.orderUnits).toBeGreaterThan(0);
+    expect(natural.flags).not.toContain("pedido_minimo_del_lote");
   });
 
   it("el stock proyectado al mes de llegada no es negativo y la demanda sin stock no infla el pedido", () => {

@@ -15,6 +15,9 @@ min_order_effective_threshold_pct: 0.5 # necesidad < 50% del minimo -> pedido 0
 # promedio del modelo (0 si no hay snapshot). La demanda de esos meses se imputa.
 stockout_min_stock_fraction: 0.5
 
+# Ventana (meses hasta el corte) de ventas y leads perdidos que reparte la mezcla sugerida por versión.
+version_mix_window_months: 12
+
 forecast_weights:
   recent_6m: 0.6
   prior_6m: 0.4

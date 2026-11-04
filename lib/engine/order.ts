@@ -201,6 +201,7 @@ export function computeModelOrderPlan(params: {
     flags.push("necesidad_bajo_minimo_efectivo_pedido_cero");
   }
   if (need <= 0) flags.push("sin_necesidad_pedido_cero");
+  if (orderUnits > 0 && need < model.lot_min) flags.push("pedido_minimo_del_lote");
 
   return {
     modelName: model.name,

@@ -79,8 +79,8 @@ describe("sliceDataAtCutoff", () => {
       sales: [sale("2025-06-30", 1), sale("2025-07-01", 2)],
       leads: [lead("2025-06-15"), lead("2025-07-20"), lead(null)],
       inventory: [
-        { monthEnd: "2025-06-30", modelName: "Hilux", units: 5 },
-        { monthEnd: "2025-07-31", modelName: "Hilux", units: 7 },
+        { monthEnd: "2025-06-30", modelName: "Hilux", units: 5, avgAgeDays: null },
+        { monthEnd: "2025-07-31", modelName: "Hilux", units: 7, avgAgeDays: null },
       ],
       factoryOrders: [order("2025-06-01"), order("2025-07-15"), order(null)],
     };
@@ -126,6 +126,7 @@ describe("runBacktest", () => {
     fleet_outlier_min_units: 10,
     min_order_effective_threshold_pct: 0.5,
     stockout_min_stock_fraction: 0.5,
+    version_mix_window_months: 12,
     forecast_weights: { recent_6m: 0.6, prior_6m: 0.4 },
     seasonality_min_years: 2,
     safety_stock: {
