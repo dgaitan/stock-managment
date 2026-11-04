@@ -19,6 +19,7 @@ export interface CycleConfig {
   fleet_outlier_min_units: number;
   min_order_effective_threshold_pct: number;
   forecast_weights: { recent_6m: number; prior_6m: number };
+  seasonality_min_years: number;
   safety_stock: {
     z_high_margin: number;
     z_mid_margin: number;
