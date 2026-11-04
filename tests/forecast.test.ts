@@ -10,7 +10,7 @@ import type { MonthlyDemandPoint } from "@/lib/engine/demand";
 const WEIGHTS = { recent_6m: 0.6, prior_6m: 0.4 };
 
 function point(month: string, correctedDemand: number): MonthlyDemandPoint {
-  return { month, baseSales: correctedDemand, lostStockRecovered: 0, substitutionRemoved: 0, correctedDemand };
+  return { month, baseSales: correctedDemand, lostStockRecovered: 0, substitutionRecovered: 0, substitutionRemoved: 0, correctedDemand };
 }
 
 function monthStr(n: number): string {

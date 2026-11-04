@@ -1,6 +1,7 @@
 // Puro, sin Next/React/DB. Demanda corregida mensual por modelo:
 // ventas sin flotas extraordinarias + leads perdidos por falta de stock
-// x tasa de cierre del modelo - ventas que fueron sustitución. Ver
+// x tasa de cierre del modelo + demanda que se fue a otro modelo - ventas
+// que en realidad eran demanda de otro modelo (sustitución). Ver
 // docs/PLAN.md "Lógica del motor de pedido", paso 4.
 
 import { monthKey } from "@/lib/engine/months";
@@ -10,7 +11,8 @@ export interface MonthlyDemandPoint {
   month: string; // "YYYY-MM"
   baseSales: number; // ventas netas sin flota
   lostStockRecovered: number; // leads perdidos por stock x tasa de cierre
-  substitutionRemoved: number; // ventas del modelo que en realidad fueron sustitución de otro
+  substitutionRecovered: number; // leads que querían este modelo y compraron otro (demanda de este modelo)
+  substitutionRemoved: number; // ventas de este modelo que en realidad eran demanda de otro modelo
   correctedDemand: number;
 }
 
@@ -69,7 +71,8 @@ export function computeMonthlyCorrectedDemand(
     }
 
     let lostStockUnits = 0;
-    let substitutionUnits = 0;
+    let substitutionOut = 0; // quería este modelo, compró otro
+    let substitutionIn = 0; // quería otro modelo, compró este
     for (const lead of leads) {
       if (lead.closedAt === null || monthKey(lead.closedAt) !== month) continue;
       if (
@@ -79,24 +82,26 @@ export function computeMonthlyCorrectedDemand(
       ) {
         lostStockUnits += lead.units;
       }
-      if (
-        lead.boughtModelName === modelName &&
+      const isSubstitution =
+        lead.result === "Ganada" &&
         lead.modelName !== null &&
-        lead.modelName !== modelName &&
-        lead.result === "Ganada"
-      ) {
-        substitutionUnits += lead.units;
-      }
+        lead.boughtModelName !== null &&
+        lead.modelName !== lead.boughtModelName;
+      if (!isSubstitution) continue;
+      if (lead.modelName === modelName) substitutionOut += lead.units;
+      if (lead.boughtModelName === modelName) substitutionIn += lead.units;
     }
 
     const lostStockRecovered = lostStockUnits * closeRate;
-    const correctedDemand = baseSales + lostStockRecovered - substitutionUnits;
+    // La venta de una sustitución queda en el modelo comprado, pero la demanda original era del modelo de interés.
+    const correctedDemand = baseSales + lostStockRecovered + substitutionOut - substitutionIn;
 
     return {
       month,
       baseSales,
       lostStockRecovered,
-      substitutionRemoved: substitutionUnits,
+      substitutionRecovered: substitutionOut,
+      substitutionRemoved: substitutionIn,
       correctedDemand,
     };
   });
