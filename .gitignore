@@ -38,8 +38,8 @@ yarn-error.log*
 .vercel
 
 # datos ficticios del caso: nunca se publican
-/data/seed/*.xlsx
-/data/seed/*.xls
+/data/seed/*
+!/data/seed/.gitkeep
 
 # typescript
 *.tsbuildinfo
