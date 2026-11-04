@@ -5,7 +5,7 @@
 // docs/PLAN.md "Lógica del motor de pedido", paso 4.
 
 import { addMonths, monthKey } from "@/lib/engine/months";
-import type { NormalizedLead, NormalizedSale } from "@/lib/sources/types";
+import type { EngineLead, EngineSale } from "@/lib/engine/inputs";
 
 export interface MonthlyDemandPoint {
   month: string; // "YYYY-MM"
@@ -21,7 +21,7 @@ export interface MonthlyDemandPoint {
  * de interés es `modelName`. Usada para estimar cuántos de los leads
  * perdidos por falta de stock se habrían convertido en venta.
  */
-export function computeCloseRate(modelName: string, leads: NormalizedLead[]): number {
+export function computeCloseRate(modelName: string, leads: EngineLead[]): number {
   let total = 0;
   let won = 0;
   for (const lead of leads) {
@@ -37,7 +37,7 @@ export function computeCloseRate(modelName: string, leads: NormalizedLead[]): nu
  * mes de corte. Los meses sin señal cuentan como demanda 0 (y se pueden
  * imputar si fueron de quiebre), en vez de desaparecer de los promedios.
  */
-export function monthsThroughCutoff(sales: NormalizedSale[], cutoffMonth: string): string[] {
+export function monthsThroughCutoff(sales: EngineSale[], cutoffMonth: string): string[] {
   let first: string | null = null;
   for (const sale of sales) {
     const m = monthKey(sale.date);
@@ -50,7 +50,7 @@ export function monthsThroughCutoff(sales: NormalizedSale[], cutoffMonth: string
 }
 
 /** Meses (ordenados) en los que hay alguna señal de demanda para el modelo: venta, lead de interés, o sustitución hacia el modelo. */
-export function deriveDemandMonths(modelName: string, sales: NormalizedSale[], leads: NormalizedLead[]): string[] {
+export function deriveDemandMonths(modelName: string, sales: EngineSale[], leads: EngineLead[]): string[] {
   const months = new Set<string>();
   for (const sale of sales) {
     if (sale.modelName === modelName) months.add(monthKey(sale.date));
@@ -72,8 +72,8 @@ export function deriveDemandMonths(modelName: string, sales: NormalizedSale[], l
  */
 export function computeMonthlyCorrectedDemand(
   modelName: string,
-  sales: NormalizedSale[],
-  leads: NormalizedLead[],
+  sales: EngineSale[],
+  leads: EngineLead[],
   months?: string[],
 ): MonthlyDemandPoint[] {
   const closeRate = computeCloseRate(modelName, leads);

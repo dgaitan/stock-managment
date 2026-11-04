@@ -2,6 +2,7 @@
 // el xlsx crudo con SheetJS y su propia limpieza mínima. El lado independiente
 // no usa lib/sources ni lib/engine; solo los importa al final para comparar.
 // Uso: bun run crosscheck [-- archivo.xlsx]. Sale con código 1 si algo no cuadra.
+// Si hay DATABASE_URL, también verifica que el pedido leído de la base sea idéntico.
 
 import * as XLSX from "xlsx";
 import { computeModelOrderPlan, type ModelOrderPlan } from "@/lib/engine/order";
@@ -179,6 +180,23 @@ for (const m of MODELS) {
   const units = plans.get(m)!.orderUnits;
   const ok = lot !== undefined && (units === 0 || (units >= lot.min && units % lot.mult === 0));
   checks.push({ check: `Pedido ${m} cumple lote del comunicado`, independent: lot ? `${lot.min}/${lot.mult}` : "sin regla", engine: units, ok });
+}
+
+// paridad: el pedido que calcula el motor leyendo la base (lo que usan la CLI y la app) debe
+// ser idéntico al de leer el xlsx directo. Se omite si no hay DATABASE_URL.
+await import("dotenv/config");
+if (process.env.DATABASE_URL) {
+  const { db } = await import("@/lib/db/client");
+  const { loadEngineInputs } = await import("@/lib/db/loadEngineInputs");
+  const fromDb = await loadEngineInputs(db);
+  for (const m of MODELS) {
+    const economics = fromDb.economicsByModel.get(m) ?? { unitCost: 0, marginPct: 0, monthlyFinCost: 0 };
+    const model = fromDb.models.find((x) => x.name === m)!;
+    const plan = computeModelOrderPlan({ config: fromDb.config, cycle: fromDb.cycle, model, economics, ...fromDb.data });
+    add(`Pedido ${m}: base de datos vs xlsx`, plans.get(m)!.orderUnits, plan.orderUnits);
+  }
+} else {
+  console.log("DATABASE_URL no configurado: se omite la paridad con la base.");
 }
 
 console.table(checks.map((c) => ({ Verificación: c.check, Independiente: c.independent, Motor: c.engine, OK: c.ok ? "✓" : "✗ DIFIERE" })));

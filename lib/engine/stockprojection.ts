@@ -6,7 +6,7 @@
 // Ver docs/PLAN.md "Lógica del motor de pedido".
 
 import { compareMonthKeys, monthKey } from "@/lib/engine/months";
-import type { NormalizedFactoryOrder } from "@/lib/sources/types";
+import type { EngineFactoryOrder } from "@/lib/engine/inputs";
 
 export interface StockProjection {
   stockEnd: number; // unidades en patio al terminar el último mes proyectado (>= 0)
@@ -15,7 +15,7 @@ export interface StockProjection {
 
 /** Una línea de pedido está en tránsito al corte si se hizo antes del corte y aún no se había recibido. */
 export function isInTransitAtCutoff(
-  order: NormalizedFactoryOrder,
+  order: EngineFactoryOrder,
   modelName: string,
   cutoffDate: string,
 ): boolean {
@@ -31,7 +31,7 @@ export function isInTransitAtCutoff(
  */
 export function groupTransitArrivals(params: {
   modelName: string;
-  factoryOrders: NormalizedFactoryOrder[];
+  factoryOrders: EngineFactoryOrder[];
   cutoffDate: string;
   months: string[];
 }): { byMonth: Record<string, number>; afterPeriod: number } {

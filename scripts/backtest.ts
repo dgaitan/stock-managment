@@ -1,7 +1,9 @@
+import "dotenv/config";
 import { writeFileSync } from "node:fs";
+import { db } from "@/lib/db/client";
+import { loadEngineInputs } from "@/lib/db/loadEngineInputs";
 import { computeErrorMetrics, runBacktest, type BacktestRow } from "@/lib/engine/backtest";
 import { monthKey } from "@/lib/engine/months";
-import { loadCaseContext } from "./caseContext";
 
 const pct = (v: number | null) => (v === null ? "n/d" : `${(v * 100).toFixed(0)}%`);
 const signedPct = (v: number | null) => (v === null ? "n/d" : `${v >= 0 ? "+" : ""}${(v * 100).toFixed(0)}%`);
@@ -40,14 +42,13 @@ function toMarkdownTable(summaries: ReturnType<typeof summarize>[], firstColumn:
   return [...header, ...body].join("\n");
 }
 
-function main() {
-  const filePath = process.argv[2] ?? "data/seed/caso1.xlsx";
-  const { config, parsed, cycle, models, economicsByModel } = loadCaseContext(filePath);
+async function main() {
+  const { config, data, cycle, models, economicsByModel } = await loadEngineInputs(db);
 
   const rows = runBacktest({
     config,
     models,
-    data: parsed,
+    data,
     economicsByModel,
     dataEndMonth: monthKey(cycle.cutoffDate),
   });
@@ -72,7 +73,7 @@ function main() {
   const markdown = [
     "# Backtest del pronóstico",
     "",
-    `Generado con \`bun run backtest\` sobre \`${filePath}\` (datos hasta ${cycle.cutoffDate}).`,
+    `Generado con \`bun run backtest\` sobre la base de datos (datos hasta ${cycle.cutoffDate}).`,
     "",
     "Para cada corte (" + config.backtest_cutoffs.join(", ") + ") el motor usa **solo datos anteriores al corte** y pronostica",
     `la ventana de cobertura que cubriría el pedido de ese corte (los meses entre la llegada del pedido y la llegada del pedido de la ventana siguiente, con lead time de ${config.lead_time_months} meses). Se compara contra lo que pasó realmente.`,
@@ -98,4 +99,9 @@ function main() {
   console.log("\nEscrito en docs/BACKTEST.md");
 }
 
-main();
+main()
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });

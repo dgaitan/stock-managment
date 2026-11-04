@@ -6,11 +6,11 @@
 
 import { addMonths, monthKey } from "@/lib/engine/months";
 import type {
-  NormalizedFactoryOrder,
-  NormalizedInventorySnapshot,
-  NormalizedLead,
-  NormalizedSale,
-} from "@/lib/sources/types";
+  EngineFactoryOrder,
+  EngineInventoryRow,
+  EngineLead,
+  EngineSale,
+} from "@/lib/engine/inputs";
 
 export interface StockFlowMonth {
   month: string; // "YYYY-MM"
@@ -33,7 +33,7 @@ function sumUnits<T>(rows: T[], predicate: (row: T) => boolean, unitsOf: (row: T
 }
 
 /** Promedio mensual de ventas netas (sin flota) del modelo, usado como referencia de "medio mes de demanda". */
-export function computeAvgMonthlyNetSales(modelName: string, sales: NormalizedSale[]): number {
+export function computeAvgMonthlyNetSales(modelName: string, sales: EngineSale[]): number {
   const monthly = new Map<string, number>();
   for (const sale of sales) {
     if (sale.modelName !== modelName || sale.isFleetOutlier) continue;
@@ -48,7 +48,7 @@ export function computeAvgMonthlyNetSales(modelName: string, sales: NormalizedSa
 /** Stock en patio al cierre de cada mes con snapshot de inventario del modelo ("YYYY-MM" -> unidades). */
 export function closingStockByMonth(
   modelName: string,
-  inventory: NormalizedInventorySnapshot[],
+  inventory: EngineInventoryRow[],
 ): Map<string, number> {
   const closing = new Map<string, number>();
   for (const row of inventory) {
@@ -68,10 +68,10 @@ export function closingStockByMonth(
  */
 export function buildMonthlyStockFlow(params: {
   modelName: string;
-  sales: NormalizedSale[];
-  inventory: NormalizedInventorySnapshot[];
-  factoryOrders: NormalizedFactoryOrder[];
-  leads: NormalizedLead[];
+  sales: EngineSale[];
+  inventory: EngineInventoryRow[];
+  factoryOrders: EngineFactoryOrder[];
+  leads: EngineLead[];
 }): StockFlowMonth[] {
   const { modelName, sales, inventory, factoryOrders, leads } = params;
 

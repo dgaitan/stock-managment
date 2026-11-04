@@ -1,6 +1,6 @@
-// Carga compartida de los scripts que leen el xlsx (pedido, backtest, crosscheck):
+// Carga del xlsx para la validación cruzada:
 // config de supuestos, reglas vigentes, datos limpios y el ciclo derivado del corte.
-// Cuando el motor lea de la base (Fase 4, paso 3) este es el único punto que cambia.
+// Solo lo usa crosscheck, que valida contra el xlsx crudo. La CLI y la app leen la base (lib/db/loadEngineInputs.ts).
 
 import { type CycleConfig, loadCycleConfig, loadCycleRules, type ModelConfig } from "@/lib/engine/config";
 import { type Cycle, deriveCycle, latestInventoryMonthEnd } from "@/lib/engine/cycle";

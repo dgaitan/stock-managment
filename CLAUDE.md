@@ -11,9 +11,9 @@ Entrega: jueves 5 de noviembre de 2026, 6:00 p.m.
   salen del último cierre de inventario (`lib/engine/cycle.ts`); lotes y regla RAV4
   salen de las reglas vigentes (`lib/engine/rules.ts`, tabla `cycle_rules`, con
   vigencia `permanent` o por ventana). `config/cycle.yaml` queda solo con supuestos
-  de pronóstico (pesos, z, umbrales, `window_months`). Hasta que el motor lea de la
-  base (Fase 4, paso 3), los scripts de xlsx cargan las reglas de
-  `config/cycle_rules.yaml`, que es también la semilla de `cycle_rules`. No agregar
+  de pronóstico (pesos, z, umbrales, `window_months`). El motor lee todo de la base con un solo cargador
+  (`lib/db/loadEngineInputs.ts`, usado por la CLI y la app); `config/cycle_rules.yaml`
+  es solo la semilla de `cycle_rules`. No agregar
   fechas ni meses fijos («febrero», «2026-10») en código nuevo.
 - La IA nunca decide ni escribe cantidades. Puede (a) sugerir alias que el usuario
   confirma (`lib/ai/mapper.ts`), (b) extraer reglas de los comunicados y traducir
@@ -85,10 +85,11 @@ violación que reporte. Una tarea con resultado FALLA no está terminada.
 - `bun run db:generate` / `bun run db:migrate` — migraciones Drizzle
 - `bun run seed [-- <xlsx>]` — importa el Excel (por defecto `data/seed/caso1.xlsx`):
   muestra qué cambia por hoja y no escribe nada si no hay cambios
-- `bun run pedido -- <xlsx>` — CLI que imprime la tabla de pedido por modelo
-- `bun run backtest` — backtest con 4 cortes (WAPE por modelo); escribe `docs/BACKTEST.md`
+- `bun run pedido` — CLI que imprime la tabla de pedido por modelo leyendo la base
+  (importa antes con `bun run seed`)
+- `bun run backtest` — (lee la base) backtest con 4 cortes (WAPE por modelo); escribe `docs/BACKTEST.md`
 - `bun run crosscheck` — validación independiente: recalcula cifras clave desde el
-  xlsx crudo sin usar el motor y falla (código 1) si algo no cuadra. Es TypeScript,
+  xlsx crudo sin usar el motor, verifica que el pedido leído de la base sea idéntico y falla (código 1) si algo no cuadra. Es TypeScript,
   no pandas. Córrelo después de cambiar el motor o la limpieza.
 
 ## Despliegue

@@ -13,11 +13,11 @@ import { monthKey, monthRange } from "@/lib/engine/months";
 import { closingStockByMonth, computeAvgMonthlyNetSales } from "@/lib/engine/stockflow";
 import { groupTransitArrivals, isInTransitAtCutoff, projectStock } from "@/lib/engine/stockprojection";
 import type {
-  NormalizedFactoryOrder,
-  NormalizedInventorySnapshot,
-  NormalizedLead,
-  NormalizedSale,
-} from "@/lib/sources/types";
+  EngineFactoryOrder,
+  EngineInventoryRow,
+  EngineLead,
+  EngineSale,
+} from "@/lib/engine/inputs";
 
 export type SafetyTier = "high" | "mid" | "low";
 
@@ -90,8 +90,8 @@ function safetyZ(tier: SafetyTier, safetyConfig: CycleConfig["safety_stock"]): n
 /** Unidades en patio y en tránsito del modelo al corte, para proyectar el stock al mes de llegada. */
 export function computePatioAndTransito(params: {
   modelName: string;
-  inventory: NormalizedInventorySnapshot[];
-  factoryOrders: NormalizedFactoryOrder[];
+  inventory: EngineInventoryRow[];
+  factoryOrders: EngineFactoryOrder[];
   cutoffDate: string;
 }): { patio: number; transito: number } {
   const { modelName, inventory, factoryOrders, cutoffDate } = params;
@@ -124,10 +124,10 @@ export function computeModelOrderPlan(params: {
   cycle: Cycle;
   model: ModelConfig;
   economics: ModelEconomics;
-  sales: NormalizedSale[];
-  leads: NormalizedLead[];
-  inventory: NormalizedInventorySnapshot[];
-  factoryOrders: NormalizedFactoryOrder[];
+  sales: EngineSale[];
+  leads: EngineLead[];
+  inventory: EngineInventoryRow[];
+  factoryOrders: EngineFactoryOrder[];
 }): ModelOrderPlan {
   const { config, cycle, model, economics, sales, leads, inventory, factoryOrders } = params;
 

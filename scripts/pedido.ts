@@ -1,14 +1,15 @@
+import "dotenv/config";
+import { db } from "@/lib/db/client";
+import { loadEngineInputs } from "@/lib/db/loadEngineInputs";
 import { explainOrder } from "@/lib/engine/explain";
 import { computeModelOrderPlan } from "@/lib/engine/order";
-import { loadCaseContext } from "./caseContext";
 
 function formatMoney(value: number): string {
   return `$${Math.round(value).toLocaleString("es-NI")}`;
 }
 
-function main() {
-  const filePath = process.argv[2] ?? "data/seed/caso1.xlsx";
-  const { config, parsed, cycle, models, economicsByModel } = loadCaseContext(filePath);
+async function main() {
+  const { config, data, cycle, models, economicsByModel } = await loadEngineInputs(db);
   const zero = { unitCost: 0, marginPct: 0, monthlyFinCost: 0 };
 
   const plans = models.map((model) =>
@@ -17,10 +18,7 @@ function main() {
       cycle,
       model,
       economics: economicsByModel.get(model.name) ?? zero,
-      sales: parsed.sales,
-      leads: parsed.leads,
-      inventory: parsed.inventory,
-      factoryOrders: parsed.factoryOrders,
+      ...data,
     }),
   );
 
@@ -44,10 +42,6 @@ function main() {
   const totalUnits = plans.reduce((acc, p) => acc + p.orderUnits, 0);
   console.log(`\nTotal pedido: ${totalUnits} unidades, capital comprometido ${formatMoney(totalCapital)}`);
 
-  if (parsed.stats.modelosNoMapeados.length > 0) {
-    console.log(`\nAlerta: modelos sin mapear en el Excel -> ${parsed.stats.modelosNoMapeados.join(", ")}`);
-  }
-
   console.log("\n--- Por qué (por modelo) ---");
   for (const plan of plans) {
     console.log(`\n[${plan.modelName}]`);
@@ -55,4 +49,9 @@ function main() {
   }
 }
 
-main();
+main()
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });

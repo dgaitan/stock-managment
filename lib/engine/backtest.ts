@@ -9,17 +9,17 @@ import { computeMonthlyCorrectedDemand } from "@/lib/engine/demand";
 import { addMonths, monthKey, monthRange } from "@/lib/engine/months";
 import { computeModelOrderPlan, type ModelEconomics } from "@/lib/engine/order";
 import type {
-  NormalizedFactoryOrder,
-  NormalizedInventorySnapshot,
-  NormalizedLead,
-  NormalizedSale,
-} from "@/lib/sources/types";
+  EngineFactoryOrder,
+  EngineInventoryRow,
+  EngineLead,
+  EngineSale,
+} from "@/lib/engine/inputs";
 
 export interface BacktestData {
-  sales: NormalizedSale[];
-  leads: NormalizedLead[];
-  inventory: NormalizedInventorySnapshot[];
-  factoryOrders: NormalizedFactoryOrder[];
+  sales: EngineSale[];
+  leads: EngineLead[];
+  inventory: EngineInventoryRow[];
+  factoryOrders: EngineFactoryOrder[];
 }
 
 export interface BacktestRow {
@@ -43,7 +43,7 @@ export function sliceDataAtCutoff(data: BacktestData, cutoffDate: string): Backt
   };
 }
 
-function netSalesInMonths(modelName: string, sales: NormalizedSale[], months: Set<string>): number {
+function netSalesInMonths(modelName: string, sales: EngineSale[], months: Set<string>): number {
   let total = 0;
   for (const s of sales) {
     if (s.modelName === modelName && !s.isFleetOutlier && months.has(monthKey(s.date))) total += s.units;
@@ -52,7 +52,7 @@ function netSalesInMonths(modelName: string, sales: NormalizedSale[], months: Se
 }
 
 /** Referencia ingenua: venta mensual promedio (sin flota) de los 12 meses que terminan en el corte. */
-export function naiveMonthlyRate(modelName: string, sales: NormalizedSale[], cutoffMonth: string): number {
+export function naiveMonthlyRate(modelName: string, sales: EngineSale[], cutoffMonth: string): number {
   const last12 = new Set(monthRange(addMonths(cutoffMonth, -11), 12));
   return netSalesInMonths(modelName, sales, last12) / 12;
 }

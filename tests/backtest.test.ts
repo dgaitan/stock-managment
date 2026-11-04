@@ -79,8 +79,8 @@ describe("sliceDataAtCutoff", () => {
       sales: [sale("2025-06-30", 1), sale("2025-07-01", 2)],
       leads: [lead("2025-06-15"), lead("2025-07-20"), lead(null)],
       inventory: [
-        { monthEnd: "2025-06-30", modelNameRaw: "Hilux", modelName: "Hilux", version: null, color: null, units: 5, avgAgeDays: null },
-        { monthEnd: "2025-07-31", modelNameRaw: "Hilux", modelName: "Hilux", version: null, color: null, units: 7, avgAgeDays: null },
+        { monthEnd: "2025-06-30", modelName: "Hilux", units: 5 },
+        { monthEnd: "2025-07-31", modelName: "Hilux", units: 7 },
       ],
       factoryOrders: [order("2025-06-01"), order("2025-07-15"), order(null)],
     };
