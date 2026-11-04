@@ -18,7 +18,7 @@ export const models = pgTable("models", {
   name: text("name").notNull().unique(),
   unitCost: numeric("unit_cost", { precision: 12, scale: 2 }).notNull(),
   marginPct: numeric("margin_pct", { precision: 5, scale: 4 }).notNull(),
-  monthlyFinCost: numeric("monthly_fin_cost", { precision: 5, scale: 4 }).notNull(),
+  monthlyFinCost: numeric("monthly_fin_cost", { precision: 10, scale: 2 }).notNull(),
   lotMin: integer("lot_min").notNull(),
   lotMultiple: integer("lot_multiple").notNull(),
   lifecycle: text("lifecycle", { enum: ["active", "last_window"] })

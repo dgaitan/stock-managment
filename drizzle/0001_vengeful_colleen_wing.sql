@@ -1,0 +1,1 @@
+ALTER TABLE "models" ALTER COLUMN "monthly_fin_cost" SET DATA TYPE numeric(10, 2);
