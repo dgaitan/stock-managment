@@ -31,6 +31,47 @@ export function normalizeModelName(
   return null;
 }
 
+/** Sucursales canónicas (7, ver docs/PLAN.md). */
+export const CANONICAL_BRANCHES = [
+  "Managua Central",
+  "Managua Sur",
+  "León",
+  "Chinandega",
+  "Estelí",
+  "Matagalpa",
+  "Juigalpa",
+] as const;
+
+/** Abreviaturas conocidas que no se resuelven solo quitando acentos/mayúsculas. */
+const BRANCH_ABBREVIATIONS: Record<string, string> = {
+  "mga sur": "Managua Sur",
+};
+
+function stripAccents(value: string): string {
+  return value.normalize("NFD").replace(/[̀-ͯ]/g, "");
+}
+
+/**
+ * Normaliza un nombre de sucursal crudo: quita acentos y mayúsculas
+ * para emparejar contra el catálogo canónico ("Esteli" / "ESTELÍ" ->
+ * "Estelí"), y resuelve abreviaturas conocidas ("Mga Sur" -> "Managua
+ * Sur"). Devuelve null si no coincide con ninguna sucursal canónica.
+ */
+export function normalizeBranchName(
+  raw: string | null | undefined,
+  canonicalBranches: readonly string[] = CANONICAL_BRANCHES,
+): string | null {
+  if (!raw) return null;
+  const value = collapseSpaces(raw);
+  if (!value) return null;
+
+  const folded = stripAccents(value).toLowerCase();
+  for (const canonical of canonicalBranches) {
+    if (stripAccents(canonical).toLowerCase() === folded) return canonical;
+  }
+  return BRANCH_ABBREVIATIONS[folded] ?? null;
+}
+
 export type LossReasonCategory =
   | "stock"
   | "price"

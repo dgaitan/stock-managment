@@ -7,6 +7,7 @@ export interface NormalizedSale {
   invoice: string;
   lineHash: string;
   date: string; // ISO yyyy-mm-dd
+  branchNameRaw: string | null;
   branchName: string | null;
   seller: string | null;
   customerType: string | null;
@@ -36,6 +37,7 @@ export interface NormalizedLead {
   externalId: string;
   createdAt: string | null;
   closedAt: string | null;
+  branchNameRaw: string | null;
   branchName: string | null;
   seller: string | null;
   customerType: string | null;

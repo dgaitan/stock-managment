@@ -5,6 +5,7 @@ import {
   excelSerialToISODate,
   isCreditNote,
   isFleetOutlier,
+  normalizeBranchName,
   normalizeLossReason,
   normalizeModelName,
 } from "@/lib/engine/clean";
@@ -81,7 +82,8 @@ export function parseWorkbook(
   for (const row of ventasRows) {
     const invoice = toText(row["Factura"]) ?? "";
     const date = toISODate(row["Fecha"]) ?? "";
-    const branchName = toText(row["Sucursal"]);
+    const branchNameRaw = toText(row["Sucursal"]);
+    const branchName = normalizeBranchName(branchNameRaw);
     const seller = toText(row["Vendedor"]);
     const customerType = toText(row["Tipo de cliente"]);
     const customer = toText(row["Cliente"]);
@@ -96,7 +98,7 @@ export function parseWorkbook(
     const lineHash = computeLineHash([
       invoice,
       date,
-      branchName,
+      branchNameRaw,
       seller,
       customerType,
       customer,
@@ -119,6 +121,7 @@ export function parseWorkbook(
       invoice,
       lineHash,
       date,
+      branchNameRaw,
       branchName,
       seller,
       customerType,
@@ -155,11 +158,13 @@ export function parseWorkbook(
     const boughtRaw = toText(row["Modelo comprado (si difiere)"]);
     const bought = boughtRaw ? resolveModel(boughtRaw) : null;
     const lossReasonRaw = toText(row["Motivo de pérdida"]);
+    const branchNameRaw = toText(row["Sucursal"]);
     return {
       externalId: toText(row["ID Oportunidad"]) ?? "",
       createdAt: toISODate(row["Fecha creación"]),
       closedAt: toISODate(row["Fecha cierre"]),
-      branchName: toText(row["Sucursal"]),
+      branchNameRaw,
+      branchName: normalizeBranchName(branchNameRaw),
       seller: toText(row["Vendedor"]),
       customerType: toText(row["Tipo de cliente"]),
       modelNameRaw: model.raw,

@@ -25,7 +25,7 @@ function buildWorkbook() {
     [45200, "FAC-1", "Managua", "Ana", "Individual", "Juan Pérez", "Toyota Hilux", "4x4", "Blanco", 1, 40000, ""],
     // fila duplicada exacta de la anterior: debe deduplicarse por line_hash
     [45200, "FAC-1", "Managua", "Ana", "Individual", "Juan Pérez", "Toyota Hilux", "4x4", "Blanco", 1, 40000, ""],
-    [45201, "FAC-2", "León", "Luis", "Individual", "María Gómez", "corolla  cross", "SEG", "Negro", 1, 30000, ""],
+    [45201, "FAC-2", "Leon", "Luis", "Individual", "María Gómez", "corolla  cross", "SEG", "Negro", 1, 30000, ""],
     [
       45202,
       "NC-1",
@@ -139,6 +139,12 @@ describe("parseWorkbook", () => {
     const corollaCross = result.sales.find((s) => s.invoice === "FAC-2");
     expect(hilux?.modelName).toBe("Hilux");
     expect(corollaCross?.modelName).toBe("Corolla Cross");
+  });
+
+  it("normaliza nombres de sucursal sin acentos", () => {
+    const corollaCross = result.sales.find((s) => s.invoice === "FAC-2");
+    expect(corollaCross?.branchNameRaw).toBe("Leon");
+    expect(corollaCross?.branchName).toBe("León");
   });
 
   it("marca modelos sin mapear como alerta de calidad", () => {

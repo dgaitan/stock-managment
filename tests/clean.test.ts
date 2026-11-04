@@ -5,6 +5,7 @@ import {
   excelSerialToISODate,
   isCreditNote,
   isFleetOutlier,
+  normalizeBranchName,
   normalizeLossReason,
   normalizeModelName,
 } from "@/lib/engine/clean";
@@ -75,6 +76,25 @@ describe("normalizeLossReason", () => {
   it("devuelve null para un motivo desconocido", () => {
     expect(normalizeLossReason("Motivo inventado")).toBeNull();
     expect(normalizeLossReason(null)).toBeNull();
+  });
+});
+
+describe("normalizeBranchName", () => {
+  it("quita acentos y mayúsculas para emparejar la sucursal canónica", () => {
+    expect(normalizeBranchName("Esteli")).toBe("Estelí");
+    expect(normalizeBranchName("ESTELÍ")).toBe("Estelí");
+    expect(normalizeBranchName("Leon")).toBe("León");
+    expect(normalizeBranchName("MANAGUA CENTRAL")).toBe("Managua Central");
+    expect(normalizeBranchName("MATAGALPA")).toBe("Matagalpa");
+  });
+
+  it("resuelve abreviaturas conocidas", () => {
+    expect(normalizeBranchName("Mga Sur")).toBe("Managua Sur");
+  });
+
+  it("devuelve null para una sucursal desconocida", () => {
+    expect(normalizeBranchName("Sucursal Fantasma")).toBeNull();
+    expect(normalizeBranchName(null)).toBeNull();
   });
 });
 
