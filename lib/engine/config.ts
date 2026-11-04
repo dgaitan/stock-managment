@@ -24,6 +24,9 @@ export interface CycleConfig {
     z_high_margin: number;
     z_mid_margin: number;
     z_low_margin_or_high_fin_cost: number;
+    margin_high_threshold_pct: number;
+    margin_low_threshold_pct: number;
+    high_fin_cost_monthly_threshold: number;
   };
   plan_piso_monthly_pct: number;
   aging_discounts: Record<string, number>;

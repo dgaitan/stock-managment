@@ -22,6 +22,9 @@ safety_stock:
   z_high_margin: 1.65
   z_mid_margin: 1.28
   z_low_margin_or_high_fin_cost: 0.84
+  margin_high_threshold_pct: 0.12 # margen >= esto -> colchon alto (si el costo financiero no lo penaliza)
+  margin_low_threshold_pct: 0.09 # margen <= esto -> colchon bajo
+  high_fin_cost_monthly_threshold: 400 # costo financiero mensual/unidad (USD) por encima de esto -> colchon bajo
 
 plan_piso_monthly_pct: 0.009 # 0.9% mensual sobre costo
 aging_discounts:
@@ -60,7 +63,7 @@ models:
     lot_min: 4
     lot_multiple: 4
     lifecycle: last_window
-    horizon_months: 2 # solo feb-abr, sin seguridad (nueva generacion may-2027)
+    horizon_months: 3 # solo feb-abr (3 meses), sin seguridad (nueva generacion may-2027)
     safety_stock_override: 0
   - name: Land Cruiser Prado
     lot_min: 2
