@@ -3,13 +3,14 @@ import type { ReactNode } from "react";
 import { APP_NAME } from "@/lib/app";
 
 type DashboardLayoutProps = {
+  headerActions: ReactNode;
   userMenu: ReactNode;
   title: string;
   subtitle: string;
   children: ReactNode;
 };
 
-export function DashboardLayout({ userMenu, title, subtitle, children }: DashboardLayoutProps) {
+export function DashboardLayout({ headerActions, userMenu, title, subtitle, children }: DashboardLayoutProps) {
   return (
     <div className="min-h-screen bg-muted/40">
       <header className="flex min-h-16 items-center gap-4 border-b bg-background px-8 py-3">
@@ -19,7 +20,10 @@ export function DashboardLayout({ userMenu, title, subtitle, children }: Dashboa
           </span>
           <span className="font-semibold">{APP_NAME}</span>
         </div>
-        <div className="ml-auto">{userMenu}</div>
+        <div className="ml-auto flex items-center gap-1">
+          {headerActions}
+          {userMenu}
+        </div>
       </header>
       <main className="mx-auto flex max-w-6xl flex-col gap-5 p-8">
         <div>

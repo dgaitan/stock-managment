@@ -173,6 +173,8 @@ export const cycleRules = pgTable(
     key: text("key").notNull(),
     value: text("value").notNull(),
     source: text("source", { enum: ["bulletin", "user"] }).notNull(),
+    // Comunicado de origen; null en las reglas sembradas desde config/cycle_rules.yaml.
+    bulletinId: integer("bulletin_id").references(() => bulletins.id),
   },
   (t) => [uniqueIndex("cycle_rules_cycle_model_key_idx").on(t.cycle, t.modelId, t.key)],
 );

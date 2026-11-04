@@ -4,9 +4,17 @@ import type { Database } from "@/lib/db/factRows";
 import { loadEngineInputs } from "@/lib/db/loadEngineInputs";
 import type { CycleConfig } from "@/lib/engine/config";
 
-// Base falsa: select().from(tabla) devuelve las filas de esa tabla.
+// Base falsa: select().from(tabla) devuelve las filas de esa tabla; where() no filtra,
+// así que la tabla bulletins contiene solo los comunicados archivados (lo que pide el cargador).
 function fakeDb(tables: Map<unknown, unknown[]>): Database {
-  return { select: () => ({ from: (table: unknown) => Promise.resolve(tables.get(table) ?? []) }) } as unknown as Database;
+  return {
+    select: () => ({
+      from: (table: unknown) => {
+        const rows = Promise.resolve(tables.get(table) ?? []);
+        return Object.assign(rows, { where: () => rows });
+      },
+    }),
+  } as unknown as Database;
 }
 
 const config = { lead_time_months: 4, window_months: [1, 4, 7, 10] } as CycleConfig;
@@ -41,6 +49,21 @@ describe("loadEngineInputs", () => {
     expect(inputs.data.leads[1]).toMatchObject({ modelName: null, lossReasonCategory: null });
     expect(inputs.economicsByModel.get("Hilux")).toEqual({ unitCost: 38000.5, marginPct: 0.08, monthlyFinCost: 120 });
     expect(inputs.data.factoryOrders[0]).toMatchObject({ modelName: "Hilux", eta: "2026-11-15", receivedAt: null });
+  });
+
+  it("no aplica las reglas de un comunicado archivado", async () => {
+    const withArchived = new Map(tables);
+    withArchived.set(schema.bulletins, [{ id: 10 }]);
+    withArchived.set(schema.cycleRules, [
+      { cycle: "permanent", modelId: 1, key: "lot_min", value: "12", bulletinId: null },
+      { cycle: "permanent", modelId: 1, key: "lot_multiple", value: "6", bulletinId: null },
+      { cycle: "permanent", modelId: 2, key: "lot_min", value: "4", bulletinId: null },
+      { cycle: "permanent", modelId: 2, key: "lot_multiple", value: "4", bulletinId: null },
+      { cycle: "2026-10", modelId: 2, key: "lifecycle", value: "last_window", bulletinId: 10 },
+    ]);
+    const inputs = await loadEngineInputs(fakeDb(withArchived), config);
+    expect(inputs.rules).toHaveLength(4);
+    expect(inputs.models.find((m) => m.name === "RAV4")?.lifecycle).toBeUndefined();
   });
 
   it("deriva el ciclo del último cierre y resuelve las reglas vigentes de esa ventana", async () => {

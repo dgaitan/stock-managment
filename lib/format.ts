@@ -22,3 +22,8 @@ export function formatIsoDate(isoDate: string): string {
 export function formatTimestamp(value: Date): string {
   return formatIsoDate(value.toISOString().slice(0, 10));
 }
+
+/** Fecha de hoy (AAAA-MM-DD) en la zona horaria de la operación, no en UTC. */
+export function todayIsoDate(timeZone = "America/Managua"): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone });
+}

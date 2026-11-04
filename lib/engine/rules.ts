@@ -15,10 +15,10 @@ export interface CycleRuleRow {
   value: string;
 }
 
-const RULE_KEYS = ["lot_min", "lot_multiple", "lifecycle", "horizon_months", "safety_stock_override"] as const;
-type RuleKey = (typeof RULE_KEYS)[number];
+export const RULE_KEYS = ["lot_min", "lot_multiple", "lifecycle", "horizon_months", "safety_stock_override"] as const;
+export type RuleKey = (typeof RULE_KEYS)[number];
 
-function isRuleKey(key: string): key is RuleKey {
+export function isRuleKey(key: string): key is RuleKey {
   return (RULE_KEYS as readonly string[]).includes(key);
 }
 
@@ -33,6 +33,11 @@ function parseNumber(row: CycleRuleRow, minimum: number): number {
     throw new Error(`Regla inválida ${row.model}.${row.key}="${row.value}" (ciclo ${row.cycle}): se esperaba un número >= ${minimum}`);
   }
   return value;
+}
+
+/** Lanza si la regla no es una que el motor entiende o su valor es inválido. */
+export function validateRule(row: CycleRuleRow): void {
+  applyRule({}, row);
 }
 
 function applyRule(model: Partial<ModelConfig>, row: CycleRuleRow): void {

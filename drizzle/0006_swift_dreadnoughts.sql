@@ -1,0 +1,2 @@
+ALTER TABLE "cycle_rules" ADD COLUMN "bulletin_id" integer;--> statement-breakpoint
+ALTER TABLE "cycle_rules" ADD CONSTRAINT "cycle_rules_bulletin_id_bulletins_id_fk" FOREIGN KEY ("bulletin_id") REFERENCES "public"."bulletins"("id") ON DELETE no action ON UPDATE no action;

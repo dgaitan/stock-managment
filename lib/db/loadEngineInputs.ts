@@ -1,3 +1,4 @@
+import { isNotNull } from "drizzle-orm";
 import * as schema from "@/lib/db/schema";
 import type { Database } from "@/lib/db/factRows";
 import { type CycleConfig, loadCycleConfig, type ModelConfig } from "@/lib/engine/config";
@@ -21,7 +22,7 @@ export interface EngineInputs {
 }
 
 export async function loadEngineInputs(db: Database, config: CycleConfig = loadCycleConfig()): Promise<EngineInputs> {
-  const [modelRows, saleRows, leadRows, inventoryRows, orderRows, ruleRows, lossReasonRows] = await Promise.all([
+  const [modelRows, saleRows, leadRows, inventoryRows, orderRows, allRuleRows, lossReasonRows, archived] = await Promise.all([
     db.select().from(schema.models),
     db.select().from(schema.sales),
     db.select().from(schema.leads),
@@ -29,7 +30,11 @@ export async function loadEngineInputs(db: Database, config: CycleConfig = loadC
     db.select().from(schema.factoryOrders),
     db.select().from(schema.cycleRules),
     db.select().from(schema.lossReasons),
+    db.select({ id: schema.bulletins.id }).from(schema.bulletins).where(isNotNull(schema.bulletins.archivedAt)),
   ]);
+  // Las reglas de un comunicado archivado no se aplican; al restaurarlo vuelven.
+  const archivedIds = new Set(archived.map((b) => b.id));
+  const ruleRows = allRuleRows.filter((r) => r.bulletinId === null || !archivedIds.has(r.bulletinId));
 
   const nameById = new Map(modelRows.map((m) => [m.id, m.name]));
   const modelName = (id: number | null) => (id === null ? null : (nameById.get(id) ?? null));

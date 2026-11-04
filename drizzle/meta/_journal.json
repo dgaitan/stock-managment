@@ -43,6 +43,13 @@
       "when": 1793831916938,
       "tag": "0005_real_dexter_bennett",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793833979036,
+      "tag": "0006_swift_dreadnoughts",
+      "breakpoints": true
     }
   ]
 }
