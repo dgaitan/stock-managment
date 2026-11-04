@@ -4,6 +4,7 @@
 // redondea al mínimo/múltiplo de lote. Ver docs/PLAN.md "Lógica del
 // motor de pedido", pasos 6-8.
 
+import { applyDemandFactors, NO_ADJUSTMENTS, type OrderAdjustments } from "@/lib/engine/adjustments";
 import type { CycleConfig, ModelConfig } from "@/lib/engine/config";
 import type { Cycle } from "@/lib/engine/cycle";
 import { computeMonthlyCorrectedDemand, monthsThroughCutoff } from "@/lib/engine/demand";
@@ -128,8 +129,10 @@ export function computeModelOrderPlan(params: {
   leads: EngineLead[];
   inventory: EngineInventoryRow[];
   factoryOrders: EngineFactoryOrder[];
+  adjustments?: OrderAdjustments;
 }): ModelOrderPlan {
   const { config, cycle, model, economics, sales, leads, inventory, factoryOrders } = params;
+  const adjustments = params.adjustments ?? NO_ADJUSTMENTS;
 
   const gapMonths = cycle.gapMonths;
   const coverageMonths =
@@ -155,8 +158,10 @@ export function computeModelOrderPlan(params: {
     minYearsForSeasonality: config.seasonality_min_years,
   });
 
-  const demandGap = sumForecast(forecast.forecastByMonth, gapMonths);
-  const demandCoverageWindow = sumForecast(forecast.forecastByMonth, coverageMonths);
+  const forecastByMonth = applyDemandFactors(forecast.forecastByMonth, model.name, adjustments.demandFactors);
+  const hasDemandFactor = forecastByMonth !== forecast.forecastByMonth;
+  const demandGap = sumForecast(forecastByMonth, gapMonths);
+  const demandCoverageWindow = sumForecast(forecastByMonth, coverageMonths);
 
   const { patio, transito } = computePatioAndTransito({
     modelName: model.name,
@@ -175,7 +180,7 @@ export function computeModelOrderPlan(params: {
     months: gapMonths,
     arrivalsByMonth: transitArrivals.byMonth,
     arrivalsAfterPeriod: transitArrivals.afterPeriod,
-    forecastByMonth: forecast.forecastByMonth,
+    forecastByMonth,
   });
 
   const safetyTier = classifySafetyTier(economics, config.safety_stock);
@@ -185,7 +190,8 @@ export function computeModelOrderPlan(params: {
       : safetyZ(safetyTier, config.safety_stock) * forecast.monthlyStdDev * Math.sqrt(coverageMonthsCount);
 
   const need = demandCoverageWindow + safetyStockUnits - projectedStockAtArrival;
-  const orderUnits = computeOrderUnits(need, model, config.min_order_effective_threshold_pct);
+  const isExcluded = adjustments.excludedModels.includes(model.name);
+  const orderUnits = isExcluded ? 0 : computeOrderUnits(need, model, config.min_order_effective_threshold_pct);
 
   const capital = orderUnits * economics.unitCost;
   const monthlyFinCostEstimate = orderUnits * economics.monthlyFinCost;
@@ -197,10 +203,12 @@ export function computeModelOrderPlan(params: {
   }
   if (model.lifecycle === "last_window") flags.push("ultima_ventana_de_generacion");
   if (imputedMonths.length > 0) flags.push("demanda_imputada_por_quiebre");
-  if (need > 0 && need < model.lot_min * config.min_order_effective_threshold_pct) {
+  if (hasDemandFactor) flags.push("demanda_ajustada_por_usuario");
+  if (isExcluded) flags.push("excluido_por_usuario");
+  if (!isExcluded && need > 0 && need < model.lot_min * config.min_order_effective_threshold_pct) {
     flags.push("necesidad_bajo_minimo_efectivo_pedido_cero");
   }
-  if (need <= 0) flags.push("sin_necesidad_pedido_cero");
+  if (!isExcluded && need <= 0) flags.push("sin_necesidad_pedido_cero");
   if (orderUnits > 0 && need < model.lot_min) flags.push("pedido_minimo_del_lote");
 
   return {
@@ -208,7 +216,7 @@ export function computeModelOrderPlan(params: {
     forecastMonthlyRate: forecast.baseMonthlyRate,
     monthlyStdDev: forecast.monthlyStdDev,
     hasSeasonalIndex: forecast.seasonalIndex !== null,
-    forecastByMonth: forecast.forecastByMonth,
+    forecastByMonth,
     arrivalMonth: cycle.arrivalMonth,
     gapMonths,
     coverageMonths,

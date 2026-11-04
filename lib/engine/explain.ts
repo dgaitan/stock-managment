@@ -53,6 +53,8 @@ export const FLAG_LABELS: Record<string, string> = {
   necesidad_bajo_minimo_efectivo_pedido_cero: "necesidad bajo el mínimo efectivo, pedido ajustado a 0",
   sin_necesidad_pedido_cero: "sin necesidad neta, pedido en 0",
   pedido_minimo_del_lote: "se pide el mínimo del lote",
+  demanda_ajustada_por_usuario: "demanda multiplicada por una consideración del planificador",
+  excluido_por_usuario: "excluido del pedido por el planificador",
   demanda_imputada_por_quiebre: "demanda de meses de quiebre imputada al promedio sin quiebre",
 };
 
@@ -92,7 +94,9 @@ export function explainOrder(plan: ModelOrderPlan): string {
       `necesidad neta de ${round1(plan.need)} u.`,
   );
 
-  if (plan.orderUnits === 0) {
+  if (plan.flags.includes("excluido_por_usuario")) {
+    parts.push("El planificador excluyó este modelo del cálculo, así que el pedido sugerido es 0 unidades.");
+  } else if (plan.orderUnits === 0) {
     parts.push("La necesidad no justifica pedido este ciclo, así que el pedido sugerido es 0 unidades.");
   } else {
     parts.push(
