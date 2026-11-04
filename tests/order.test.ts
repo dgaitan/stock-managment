@@ -26,6 +26,7 @@ const BASE_CONFIG: CycleConfig = {
   order_window_closes: "2026-10-30",
   fleet_outlier_min_units: 10,
   min_order_effective_threshold_pct: 0.5,
+  stockout_min_stock_fraction: 0.5,
   forecast_weights: { recent_6m: 0.6, prior_6m: 0.4 },
   seasonality_min_years: 2,
   safety_stock: {
@@ -219,6 +220,32 @@ describe("computeModelOrderPlan", () => {
     expect(plan.unmetDemandOctEne).toBeGreaterThan(0);
     // necesidad = demanda de cobertura + colchon, sin sumar la demanda perdida de oct-ene
     expect(plan.need).toBeCloseTo(plan.demandCoverageWindow + plan.safetyStockUnits, 6);
+  });
+
+  it("imputa los meses de quiebre y los reporta en el plan y en las alertas", () => {
+    // vendia 20 u/mes con patio, luego quedo sin snapshot (stock 0) de junio a septiembre
+    const sales = ["01", "02", "03", "04", "05"].map((mm) => sale({ date: `2026-${mm}-15`, units: 20 }));
+    sales.push(sale({ date: "2026-06-15", units: 2 }), sale({ date: "2026-09-15", units: 1 }));
+    const inventory = ["01", "02", "03", "04", "05"].map((mm) => ({
+      monthEnd: `2026-${mm}-28`,
+      modelNameRaw: "Hilux",
+      modelName: "Hilux",
+      version: null,
+      color: null,
+      units: 40,
+      avgAgeDays: null,
+    }));
+    const plan = computeModelOrderPlan({
+      config: BASE_CONFIG,
+      model: HILUX,
+      economics,
+      sales,
+      leads: [],
+      inventory,
+      factoryOrders: [],
+    });
+    expect(plan.imputedStockoutMonths).toBeGreaterThan(0);
+    expect(plan.flags).toContain("demanda_imputada_por_quiebre");
   });
 
   it("RAV4 (ultima ventana) usa colchon de seguridad 0 por su safety_stock_override", () => {

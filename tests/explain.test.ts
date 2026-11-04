@@ -16,6 +16,7 @@ function basePlan(partial: Partial<ModelOrderPlan>): ModelOrderPlan {
     transitoAtCutoff: 103,
     projectedStockFeb: 178,
     unmetDemandOctEne: 0,
+    imputedStockoutMonths: 0,
     safetyTier: "high",
     safetyStockUnits: 8,
     need: -125,
@@ -52,6 +53,20 @@ describe("explainOrder", () => {
     const text = explainOrder(basePlan({ projectedStockFeb: 0, unmetDemandOctEne: 64.7 }));
     expect(text).toContain("64.7");
     expect(text).toContain("ventas perdidas");
+  });
+
+  it("avisa cuántos meses de quiebre se imputaron", () => {
+    const text = explainOrder(basePlan({ imputedStockoutMonths: 9 }));
+    expect(text).toContain("9 meses");
+    expect(text).toContain("quiebre");
+  });
+
+  it("usa el singular cuando se imputó un solo mes", () => {
+    expect(explainOrder(basePlan({ imputedStockoutMonths: 1 }))).toContain("1 mes de la historia");
+  });
+
+  it("no menciona imputación cuando no hubo quiebres", () => {
+    expect(explainOrder(basePlan({}))).not.toContain("quiebre");
   });
 
   it("no menciona ventas perdidas cuando todo se atiende", () => {

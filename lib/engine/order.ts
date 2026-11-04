@@ -5,9 +5,11 @@
 // motor de pedido", pasos 6-8.
 
 import type { CycleConfig, ModelConfig } from "@/lib/engine/config";
-import { computeMonthlyCorrectedDemand } from "@/lib/engine/demand";
+import { computeMonthlyCorrectedDemand, monthsThroughCutoff } from "@/lib/engine/demand";
 import { computeForecast } from "@/lib/engine/forecast";
+import { imputeStockoutDemand } from "@/lib/engine/imputation";
 import { addMonths, monthKey, monthRange } from "@/lib/engine/months";
+import { closingStockByMonth, computeAvgMonthlyNetSales } from "@/lib/engine/stockflow";
 import { groupTransitArrivals, isInTransitAtCutoff, projectStock } from "@/lib/engine/stockprojection";
 import type {
   NormalizedFactoryOrder,
@@ -37,6 +39,7 @@ export interface ModelOrderPlan {
   transitoAtCutoff: number;
   projectedStockFeb: number;
   unmetDemandOctEne: number; // demanda oct-ene que no se puede atender (se pierde, no se arrastra al pedido)
+  imputedStockoutMonths: number; // meses de quiebre cuya demanda se imputó al promedio sin quiebre
   safetyTier: SafetyTier;
   safetyStockUnits: number;
   need: number;
@@ -130,7 +133,18 @@ export function computeModelOrderPlan(params: {
   const coverageMonthsCount = model.horizon_months ?? config.order_coverage_months;
   const coverageMonths = monthRange(febStart, coverageMonthsCount);
 
-  const history = computeMonthlyCorrectedDemand(model.name, sales, leads);
+  const rawHistory = computeMonthlyCorrectedDemand(
+    model.name,
+    sales,
+    leads,
+    monthsThroughCutoff(sales, cutoffMonth),
+  );
+  const { history, imputedMonths } = imputeStockoutDemand({
+    history: rawHistory,
+    closingStockByMonth: closingStockByMonth(model.name, inventory),
+    avgMonthlyNetSales: computeAvgMonthlyNetSales(model.name, sales),
+    minStockFraction: config.stockout_min_stock_fraction,
+  });
   const forecast = computeForecast({
     history,
     targetMonths: [...octEneMonths, ...coverageMonths],
@@ -179,6 +193,7 @@ export function computeModelOrderPlan(params: {
     flags.push("sin_historia_suficiente_para_estacionalidad");
   }
   if (model.lifecycle === "last_window") flags.push("ultima_ventana_de_generacion");
+  if (imputedMonths.length > 0) flags.push("demanda_imputada_por_quiebre");
   if (need > 0 && need < model.lot_min * config.min_order_effective_threshold_pct) {
     flags.push("necesidad_bajo_minimo_efectivo_pedido_cero");
   }
@@ -197,6 +212,7 @@ export function computeModelOrderPlan(params: {
     transitoAtCutoff: transito,
     projectedStockFeb,
     unmetDemandOctEne,
+    imputedStockoutMonths: imputedMonths.length,
     safetyTier,
     safetyStockUnits,
     need,

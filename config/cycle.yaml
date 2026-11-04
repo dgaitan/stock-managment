@@ -12,6 +12,10 @@ lost_lead_close_rate_source: historical_model_win_rate # tasa de cierre del mode
 
 min_order_effective_threshold_pct: 0.5 # necesidad < 50% del minimo -> pedido 0
 
+# Un mes es de quiebre si su stock al cierre es menor a esta fraccion de la venta mensual
+# promedio del modelo (0 si no hay snapshot). La demanda de esos meses se imputa.
+stockout_min_stock_fraction: 0.5
+
 forecast_weights:
   recent_6m: 0.6
   prior_6m: 0.4

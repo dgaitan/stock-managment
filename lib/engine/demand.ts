@@ -4,7 +4,7 @@
 // que en realidad eran demanda de otro modelo (sustitución). Ver
 // docs/PLAN.md "Lógica del motor de pedido", paso 4.
 
-import { monthKey } from "@/lib/engine/months";
+import { addMonths, monthKey } from "@/lib/engine/months";
 import type { NormalizedLead, NormalizedSale } from "@/lib/sources/types";
 
 export interface MonthlyDemandPoint {
@@ -30,6 +30,23 @@ export function computeCloseRate(modelName: string, leads: NormalizedLead[]): nu
     if (lead.result === "Ganada") won += 1;
   }
   return total > 0 ? won / total : 0;
+}
+
+/**
+ * Todos los meses consecutivos desde la primera venta de la base hasta el
+ * mes de corte. Los meses sin señal cuentan como demanda 0 (y se pueden
+ * imputar si fueron de quiebre), en vez de desaparecer de los promedios.
+ */
+export function monthsThroughCutoff(sales: NormalizedSale[], cutoffMonth: string): string[] {
+  let first: string | null = null;
+  for (const sale of sales) {
+    const m = monthKey(sale.date);
+    if (m <= cutoffMonth && (first === null || m < first)) first = m;
+  }
+  if (first === null) return [];
+  const months: string[] = [];
+  for (let m = first; m <= cutoffMonth; m = addMonths(m, 1)) months.push(m);
+  return months;
 }
 
 /** Meses (ordenados) en los que hay alguna señal de demanda para el modelo: venta, lead de interés, o sustitución hacia el modelo. */

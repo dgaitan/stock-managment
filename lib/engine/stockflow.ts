@@ -45,6 +45,20 @@ export function computeAvgMonthlyNetSales(modelName: string, sales: NormalizedSa
   return total / monthly.size;
 }
 
+/** Stock en patio al cierre de cada mes con snapshot de inventario del modelo ("YYYY-MM" -> unidades). */
+export function closingStockByMonth(
+  modelName: string,
+  inventory: NormalizedInventorySnapshot[],
+): Map<string, number> {
+  const closing = new Map<string, number>();
+  for (const row of inventory) {
+    if (row.modelName !== modelName) continue;
+    const month = monthKey(row.monthEnd);
+    closing.set(month, (closing.get(month) ?? 0) + row.units);
+  }
+  return closing;
+}
+
 /**
  * Construye la serie mensual de cuadre de stock para un modelo, a partir
  * de los meses con snapshot de inventario. Las llegadas se toman de
@@ -61,23 +75,9 @@ export function buildMonthlyStockFlow(params: {
 }): StockFlowMonth[] {
   const { modelName, sales, inventory, factoryOrders, leads } = params;
 
-  const inventoryMonths = new Set(
-    inventory.filter((r) => r.modelName === modelName).map((r) => monthKey(r.monthEnd)),
-  );
-  const months = [...inventoryMonths].sort();
+  const closingByMonth = closingStockByMonth(modelName, inventory);
+  const months = [...closingByMonth.keys()].sort();
   const avgMonthlyDemand = computeAvgMonthlyNetSales(modelName, sales);
-
-  const closingByMonth = new Map<string, number>();
-  for (const m of months) {
-    closingByMonth.set(
-      m,
-      sumUnits(
-        inventory,
-        (r) => r.modelName === modelName && monthKey(r.monthEnd) === m,
-        (r) => r.units,
-      ),
-    );
-  }
 
   return months.map((month) => {
     const closingStockReported = closingByMonth.get(month) ?? 0;

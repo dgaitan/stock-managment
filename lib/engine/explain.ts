@@ -59,6 +59,14 @@ export function explainOrder(plan: ModelOrderPlan): string {
       `${plan.hasSeasonalIndex ? " (ajustada por estacionalidad)" : " (sin ajuste estacional, poca historia)"}.`,
   );
 
+  if (plan.imputedStockoutMonths > 0) {
+    parts.push(
+      `${plan.imputedStockoutMonths} ${plan.imputedStockoutMonths === 1 ? "mes" : "meses"} de la historia ` +
+        "tuvieron quiebre de stock; sus ventas están recortadas por falta de unidades, así que su demanda " +
+        "se subió al promedio de los meses sin quiebre.",
+    );
+  }
+
   parts.push(
     `Con ${plan.patioAtCutoff} u. en patio y ${plan.transitoAtCutoff} u. en tránsito al corte, y una demanda ` +
       `estimada de ${round1(plan.demandOctEne)} u. hasta que llegue el pedido de enero, el stock proyectado a ` +
