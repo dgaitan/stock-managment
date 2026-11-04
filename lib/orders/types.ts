@@ -39,3 +39,24 @@ export interface OrderRunView {
   narrative: string | null;
   lines: OrderLineView[]; // ordenadas por pedido, mayor primero
 }
+
+/** Regla vigente para la ventana del cálculo, con el comunicado del que salió. */
+export interface ActiveRule {
+  id: number;
+  model: string;
+  key: string;
+  value: string;
+  cycle: string; // "permanent" o la ventana
+  bulletin: { subject: string; date: string } | null; // null = regla sembrada inicial
+  required: boolean; // el lote: no se puede omitir
+}
+
+/** Lo que necesita el diálogo «Calcular pedido» para armar sus pasos. */
+export interface CalculationContext {
+  window: string;
+  arrivalMonth: string;
+  models: string[];
+  months: string[]; // meses que cubre el cálculo (hasta la llegada y la cobertura); una consideración solo puede apuntar a ellos
+  rules: ActiveRule[];
+  aiEnabled: boolean;
+}

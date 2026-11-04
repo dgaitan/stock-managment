@@ -1,3 +1,4 @@
+import { RunNarrative } from "@/components/molecules/run-narrative";
 import { ReasonCell } from "@/components/molecules/reason-cell";
 import { DeltaBadge } from "@/components/molecules/delta-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,6 +42,7 @@ export function OrderTable({ run, calculateAction, renderWhy }: OrderTableProps)
         </div>
         {calculateAction}
       </CardHeader>
+      {run?.narrative ? <RunNarrative narrative={run.narrative} /> : null}
       {run ? (
         <CardContent className="px-0">
           <Table>

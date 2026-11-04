@@ -21,7 +21,15 @@ export interface EngineInputs {
   economicsByModel: Map<string, ModelEconomics>;
 }
 
-export async function loadEngineInputs(db: Database, config: CycleConfig = loadCycleConfig()): Promise<EngineInputs> {
+export interface LoadOptions {
+  excludedRuleIds?: number[]; // reglas que se omiten solo en este cálculo
+}
+
+export async function loadEngineInputs(
+  db: Database,
+  config: CycleConfig = loadCycleConfig(),
+  options: LoadOptions = {},
+): Promise<EngineInputs> {
   const [modelRows, saleRows, leadRows, inventoryRows, orderRows, allRuleRows, lossReasonRows, archived] = await Promise.all([
     db.select().from(schema.models),
     db.select().from(schema.sales),
@@ -34,7 +42,10 @@ export async function loadEngineInputs(db: Database, config: CycleConfig = loadC
   ]);
   // Las reglas de un comunicado archivado no se aplican; al restaurarlo vuelven.
   const archivedIds = new Set(archived.map((b) => b.id));
-  const ruleRows = allRuleRows.filter((r) => r.bulletinId === null || !archivedIds.has(r.bulletinId));
+  const omitted = new Set(options.excludedRuleIds ?? []);
+  const ruleRows = allRuleRows.filter(
+    (r) => !omitted.has(r.id) && (r.bulletinId === null || !archivedIds.has(r.bulletinId)),
+  );
 
   const nameById = new Map(modelRows.map((m) => [m.id, m.name]));
   const modelName = (id: number | null) => (id === null ? null : (nameById.get(id) ?? null));

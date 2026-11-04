@@ -18,6 +18,9 @@ export interface CycleRuleRow {
 export const RULE_KEYS = ["lot_min", "lot_multiple", "lifecycle", "horizon_months", "safety_stock_override"] as const;
 export type RuleKey = (typeof RULE_KEYS)[number];
 
+/** Reglas sin las que el motor no puede calcular (el lote): no se pueden omitir de un cálculo. */
+export const REQUIRED_RULE_KEYS: readonly RuleKey[] = ["lot_min", "lot_multiple"];
+
 export function isRuleKey(key: string): key is RuleKey {
   return (RULE_KEYS as readonly string[]).includes(key);
 }

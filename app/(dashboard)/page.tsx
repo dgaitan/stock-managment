@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { DashboardLayout } from "@/components/templates/dashboard-layout";
 import { BulletinsSheet } from "@/components/organisms/bulletins-sheet";
-import { CalculateButton } from "@/components/organisms/calculate-button";
+import { CalculateDialog } from "@/components/organisms/calculate-dialog";
 import { OrderTable } from "@/components/organisms/order-table";
 import { UserMenu } from "@/components/organisms/user-menu";
 import { WhySheet } from "@/components/organisms/why-sheet";
@@ -30,7 +30,7 @@ async function Dashboard() {
     >
       <OrderTable
         run={run}
-        calculateAction={<CalculateButton />}
+        calculateAction={<CalculateDialog />}
         renderWhy={(line) => (run ? <WhySheet line={line} run={{ version: run.version, createdAt: run.createdAt, cutoffDate: run.cutoffDate }} /> : null)}
       />
     </DashboardLayout>

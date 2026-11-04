@@ -66,6 +66,20 @@ describe("loadEngineInputs", () => {
     expect(inputs.models.find((m) => m.name === "RAV4")?.lifecycle).toBeUndefined();
   });
 
+  it("omite solo en este cálculo las reglas pedidas por id", async () => {
+    const withIds = new Map(tables);
+    withIds.set(schema.cycleRules, [
+      { id: 1, cycle: "permanent", modelId: 2, key: "lot_min", value: "4", bulletinId: null },
+      { id: 2, cycle: "permanent", modelId: 2, key: "lot_multiple", value: "4", bulletinId: null },
+      { id: 3, cycle: "2026-10", modelId: 2, key: "lifecycle", value: "last_window", bulletinId: null },
+    ]);
+    const base = await loadEngineInputs(fakeDb(withIds), config);
+    const omitted = await loadEngineInputs(fakeDb(withIds), config, { excludedRuleIds: [3] });
+    expect(base.models.find((m) => m.name === "RAV4")?.lifecycle).toBe("last_window");
+    expect(omitted.models.find((m) => m.name === "RAV4")?.lifecycle).toBeUndefined();
+    expect(omitted.rules).toHaveLength(2);
+  });
+
   it("deriva el ciclo del último cierre y resuelve las reglas vigentes de esa ventana", async () => {
     const inputs = await loadEngineInputs(fakeDb(tables), config);
     expect(inputs.cycle.cutoffDate).toBe("2026-09-30");

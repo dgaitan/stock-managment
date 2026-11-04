@@ -2,6 +2,7 @@
 // app (motivo, antigüedad, mezcla por versión, texto del «por qué»). La CLI y la
 // app lo usan sobre lo que entrega loadEngineInputs.
 
+import type { OrderAdjustments } from "@/lib/engine/adjustments";
 import { agingThresholdDays, summarizeStockAging } from "@/lib/engine/aging";
 import { explainOrder } from "@/lib/engine/explain";
 import type { EngineInputs } from "@/lib/db/loadEngineInputs";
@@ -20,7 +21,7 @@ export interface ComputedLine {
 
 const NO_ECONOMICS = { unitCost: 0, marginPct: 0, monthlyFinCost: 0 };
 
-export function computeOrderLines(inputs: EngineInputs): ComputedLine[] {
+export function computeOrderLines(inputs: EngineInputs, adjustments?: OrderAdjustments): ComputedLine[] {
   const { config, cycle, models, economicsByModel, data } = inputs;
   const thresholdDays = agingThresholdDays(config.aging_discounts);
 
@@ -30,6 +31,7 @@ export function computeOrderLines(inputs: EngineInputs): ComputedLine[] {
       cycle,
       model,
       economics: economicsByModel.get(model.name) ?? NO_ECONOMICS,
+      adjustments,
       ...data,
     });
     const aging = summarizeStockAging({
