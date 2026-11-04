@@ -14,6 +14,8 @@ Entrega: jueves 5 de noviembre de 2026, 6:00 p.m.
   automáticas de alias).
 - Ningún secreto en el código. Usa `.env` (ignorado) y `.env.example`.
 - Cada regla de negocio nueva lleva un test en `tests/`.
+- **Mensajes de commit en inglés** (asunto en imperativo, p. ej.
+  `Add order table organism`), aunque el código y la UI estén en español.
 - UI: shadcn/ui, textos en español, una sola página (SPA) con drawers (`Sheet`).
 - **Base de datos: Postgres, no SQLite.** El plan original (`docs/PLAN.md`)
   asumía SQLite + Docker/VPS; se cambió a Vercel, así que la persistencia es
@@ -26,6 +28,23 @@ Entrega: jueves 5 de noviembre de 2026, 6:00 p.m.
   `CREATE TABLE` a mano.
 - Idempotencia de importación por `line_hash` — reimportar el mismo Excel no
   duplica filas en `sales` / `factory_orders`.
+
+## Convenciones de código
+
+Detalle en `.claude/rules/` (se cargan solas según la ruta que se edita):
+
+- `file-size.md` — máximo 300 líneas por archivo (ESLint `max-lines`).
+- `atomic-design.md` — `components/ui` (átomos shadcn) → `molecules` →
+  `organisms` → `templates`; imports solo hacia abajo.
+- `react.md` — Server Components por defecto, hooks en `hooks/`, sin `key`
+  por índice; complementa el skill `react-best-practices`.
+- `nextjs.md` — checklist de producción de Next 16 (`proxy.ts`, `server-only`,
+  sesión verificada en cada acción).
+- `dry.md` — una fuente de verdad por conocimiento; regla de tres.
+
+**Al terminar cada tarea**, antes de declararla lista o hacer commit, ejecutar
+el agente `best-practices-reviewer` sobre los cambios y corregir toda
+violación que reporte. Una tarea con resultado FALLA no está terminada.
 
 ## Comandos
 

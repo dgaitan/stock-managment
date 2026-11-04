@@ -47,5 +47,9 @@ next-env.d.ts
 
 # vendored tool/library reference docs auto-fetched by the skills system
 /.agents/
-/.claude/
+/.claude/*
 /skills-lock.json
+
+# project conventions for Claude Code (committed)
+!/.claude/agents/
+!/.claude/rules/
