@@ -14,7 +14,8 @@
     "db:studio": "drizzle-kit studio",
     "seed": "bun scripts/seed.ts",
     "pedido": "bun scripts/pedido.ts",
-    "backtest": "bun scripts/backtest.ts"
+    "backtest": "bun scripts/backtest.ts",
+    "crosscheck": "bun scripts/crosscheck.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.4.0",
