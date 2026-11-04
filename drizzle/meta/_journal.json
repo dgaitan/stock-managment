@@ -15,6 +15,20 @@
       "when": 1793808769906,
       "tag": "0001_vengeful_colleen_wing",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793829117024,
+      "tag": "0002_rare_leper_queen",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793829659797,
+      "tag": "0003_gifted_shotgun",
+      "breakpoints": true
     }
   ]
 }

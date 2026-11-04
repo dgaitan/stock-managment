@@ -1,9 +1,7 @@
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { Executor } from "@/lib/db/factRows";
 import type { CycleConfig } from "@/lib/engine/config";
 import type { NormalizedImport } from "@/lib/sources/types";
 import * as schema from "@/lib/db/schema";
-
-type Database = PostgresJsDatabase<typeof schema>;
 
 const LOSS_REASON_CATEGORY_LABELS: Record<string, string> = {
   stock: "Falta de inventario",
@@ -22,7 +20,7 @@ const LOSS_REASON_CATEGORY_LABELS: Record<string, string> = {
  * clave natural de cada catálogo.
  */
 export async function seedCatalog(
-  db: Database,
+  db: Executor,
   config: CycleConfig,
   parsed: NormalizedImport,
 ): Promise<{ modelIdByName: Map<string, number> }> {
@@ -128,18 +126,7 @@ export async function seedCatalog(
       .onConflictDoNothing();
   }
 
-  // --- Comunicados: catálogo de referencia, se reemplaza en cada corrida ---
-  await db.delete(schema.bulletins);
-  for (const bulletin of parsed.bulletins) {
-    if (!bulletin.date) continue;
-    await db.insert(schema.bulletins).values({
-      date: bulletin.date,
-      issuer: bulletin.issuer,
-      subject: bulletin.subject,
-      body: bulletin.body,
-    });
-  }
-
+  // Los comunicados no son catálogo: los agrega applyImport sin borrar los existentes.
   return { modelIdByName };
 }
 

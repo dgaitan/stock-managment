@@ -68,12 +68,19 @@ export const lossReasonAliases = pgTable(
 );
 
 // --- Hechos normalizados ---
+//
+// Cada hecho tiene una clave de negocio estable (business_key, o external_id en
+// leads) y un line_hash con el contenido de la fila. Al reimportar: clave nueva
+// -> se inserta; misma clave con otro line_hash -> se actualiza (p. ej. un lead
+// que cambia de resultado o un pedido que cambia de ETA); mismo line_hash -> no
+// se toca. Así reimportar no duplica ni pierde cambios.
 
 export const sales = pgTable(
   "sales",
   {
     id: serial("id").primaryKey(),
     invoice: text("invoice").notNull(),
+    businessKey: text("business_key").notNull(),
     lineHash: text("line_hash").notNull(),
     date: date("date").notNull(),
     branchId: integer("branch_id").references(() => branches.id),
@@ -87,7 +94,7 @@ export const sales = pgTable(
     isCreditNote: boolean("is_credit_note").notNull().default(false),
     isFleetOutlier: boolean("is_fleet_outlier").notNull().default(false),
   },
-  (t) => [uniqueIndex("sales_line_hash_idx").on(t.lineHash)],
+  (t) => [uniqueIndex("sales_business_key_idx").on(t.businessKey)],
 );
 
 export const inventorySnapshots = pgTable("inventory_snapshots", {
@@ -105,6 +112,7 @@ export const leads = pgTable(
   {
     id: serial("id").primaryKey(),
     externalId: text("external_id").notNull(),
+    lineHash: text("line_hash").notNull(),
     createdAt: date("created_at"),
     closedAt: date("closed_at"),
     modelId: integer("model_id").references(() => models.id),
@@ -121,24 +129,40 @@ export const factoryOrders = pgTable(
   {
     id: serial("id").primaryKey(),
     orderNo: text("order_no").notNull(),
+    businessKey: text("business_key").notNull(),
     lineHash: text("line_hash").notNull(),
     orderDate: date("order_date"),
     modelId: integer("model_id").references(() => models.id),
+    version: text("version"),
+    color: text("color"),
     units: integer("units").notNull(),
     eta: date("eta"),
     status: text("status"),
     receivedAt: date("received_at"),
   },
-  (t) => [uniqueIndex("factory_orders_line_hash_idx").on(t.lineHash)],
+  (t) => [uniqueIndex("factory_orders_business_key_idx").on(t.businessKey)],
 );
 
-export const bulletins = pgTable("bulletins", {
-  id: serial("id").primaryKey(),
-  date: date("date").notNull(),
-  issuer: text("issuer"),
-  subject: text("subject"),
-  body: text("body"),
-});
+// Comunicados: CRUD propio. La importación solo agrega los que no existen
+// (por fecha y asunto); nunca borra ni sobrescribe los editados por el usuario.
+// scope "cycle" = la regla vale solo para la ventana `cycle` (p. ej. "2026-10").
+export const bulletins = pgTable(
+  "bulletins",
+  {
+    id: serial("id").primaryKey(),
+    date: date("date").notNull(),
+    issuer: text("issuer"),
+    subject: text("subject").notNull(),
+    body: text("body"),
+    source: text("source", { enum: ["excel", "user"] }).notNull().default("excel"),
+    scope: text("scope", { enum: ["permanent", "cycle"] }).notNull().default("permanent"),
+    cycle: text("cycle"),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("bulletins_date_subject_idx").on(t.date, t.subject)],
+);
 
 export const cycleRules = pgTable("cycle_rules", {
   id: serial("id").primaryKey(),
@@ -154,17 +178,24 @@ export const cycleRules = pgTable("cycle_rules", {
 export const imports = pgTable("imports", {
   id: serial("id").primaryKey(),
   filename: text("filename").notNull(),
-  uploadedAt: timestamp("uploaded_at").notNull().defaultNow(),
+  uploadedAt: timestamp("uploaded_at", { withTimezone: true }).notNull().defaultNow(),
   status: text("status").notNull(),
+  fileSha256: text("file_sha256"),
+  cutoffDate: date("cutoff_date"),
   statsJson: jsonb("stats_json"),
 });
 
+// Cada cálculo es un análisis versionado; la tabla de la app muestra el más
+// reciente. params_json guarda las reglas y consideraciones aplicadas.
 export const orderRuns = pgTable("order_runs", {
   id: serial("id").primaryKey(),
+  version: integer("version").notNull().unique(),
+  importId: integer("import_id").references(() => imports.id),
   cutoffDate: date("cutoff_date").notNull(),
   window: text("window").notNull(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   paramsJson: jsonb("params_json"),
+  narrative: text("narrative"),
 });
 
 export const orderLines = pgTable("order_lines", {

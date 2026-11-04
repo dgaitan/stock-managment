@@ -115,6 +115,7 @@ describe("computePatioAndTransito", () => {
     const factoryOrders: NormalizedFactoryOrder[] = [
       {
         orderNo: "PF-1",
+        businessKey: "bk",
         lineHash: "h1",
         orderDate: "2026-06-01",
         modelNameRaw: "Hilux",
@@ -128,6 +129,7 @@ describe("computePatioAndTransito", () => {
       },
       {
         orderNo: "PF-2",
+        businessKey: "bk",
         lineHash: "h2",
         orderDate: "2026-08-01",
         modelNameRaw: "Hilux",
@@ -155,6 +157,7 @@ describe("computeModelOrderPlan", () => {
   function sale(partial: Partial<NormalizedSale>): NormalizedSale {
     return {
       invoice: "FAC",
+      businessKey: "bk",
       lineHash: Math.random().toString(),
       date: "2026-01-15",
       branchNameRaw: null,

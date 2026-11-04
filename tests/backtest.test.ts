@@ -12,6 +12,7 @@ import type { NormalizedFactoryOrder, NormalizedLead, NormalizedSale } from "@/l
 function sale(date: string, units: number, extra: Partial<NormalizedSale> = {}): NormalizedSale {
   return {
     invoice: "F",
+    businessKey: "bk",
     lineHash: `${date}-${units}`,
     date,
     branchNameRaw: null,
@@ -35,6 +36,7 @@ function sale(date: string, units: number, extra: Partial<NormalizedSale> = {}):
 function lead(closedAt: string | null): NormalizedLead {
   return {
     externalId: `L-${closedAt}`,
+    lineHash: "lh",
     createdAt: "2025-01-01",
     closedAt,
     branchNameRaw: null,
@@ -57,6 +59,7 @@ function lead(closedAt: string | null): NormalizedLead {
 function order(orderDate: string | null): NormalizedFactoryOrder {
   return {
     orderNo: "PF",
+    businessKey: "bk",
     lineHash: `o-${orderDate}`,
     orderDate,
     modelNameRaw: "Hilux",

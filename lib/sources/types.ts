@@ -3,8 +3,11 @@
 // producen esta misma forma para que el resto del sistema no sepa de
 // dónde vino el dato.
 
+// businessKey identifica la fila entre importaciones; lineHash, su contenido
+// (si cambia, la fila se actualiza en vez de duplicarse).
 export interface NormalizedSale {
   invoice: string;
+  businessKey: string;
   lineHash: string;
   date: string; // ISO yyyy-mm-dd
   branchNameRaw: string | null;
@@ -35,6 +38,7 @@ export interface NormalizedInventorySnapshot {
 
 export interface NormalizedLead {
   externalId: string;
+  lineHash: string;
   createdAt: string | null;
   closedAt: string | null;
   branchNameRaw: string | null;
@@ -55,6 +59,7 @@ export interface NormalizedLead {
 
 export interface NormalizedFactoryOrder {
   orderNo: string;
+  businessKey: string;
   lineHash: string;
   orderDate: string | null;
   modelNameRaw: string;

@@ -3,7 +3,7 @@ import postgres from "postgres";
 import * as schema from "./schema";
 
 // Un solo driver (postgres-js) habla el protocolo estandar de Postgres, asi que
-// sirve igual contra el Postgres local de docker-compose y contra el connection
+// sirve igual contra el Postgres local (Postgres.app) y contra el connection
 // string de Neon en Vercel. Solo cambia DATABASE_URL por entorno.
 const connectionString = process.env.DATABASE_URL;
 

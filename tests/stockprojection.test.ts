@@ -7,6 +7,7 @@ const MONTHS = ["2026-10", "2026-11", "2026-12", "2027-01"];
 function order(partial: Partial<NormalizedFactoryOrder>): NormalizedFactoryOrder {
   return {
     orderNo: "PF-1",
+    businessKey: "bk",
     lineHash: "h",
     orderDate: "2026-07-27",
     modelNameRaw: "Corolla Cross",

@@ -10,6 +10,7 @@ import type {
 function sale(partial: Partial<NormalizedSale>): NormalizedSale {
   return {
     invoice: "FAC-1",
+    businessKey: "bk",
     lineHash: Math.random().toString(),
     date: "2026-01-15",
     branchNameRaw: null,
@@ -61,6 +62,7 @@ describe("buildMonthlyStockFlow", () => {
     const factoryOrders: NormalizedFactoryOrder[] = [
       {
         orderNo: "PF-1",
+        businessKey: "bk",
         lineHash: "h1",
         orderDate: "2025-10-01",
         modelNameRaw: "Hilux",
@@ -106,6 +108,7 @@ describe("buildMonthlyStockFlow", () => {
     const leads: NormalizedLead[] = [
       {
         externalId: "OPP-1",
+        lineHash: "lh",
         createdAt: "2026-01-05",
         closedAt: "2026-01-10",
         branchNameRaw: null,

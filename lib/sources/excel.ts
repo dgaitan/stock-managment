@@ -1,14 +1,13 @@
 import * as XLSX from "xlsx";
 import {
-  collapseSpaces,
   computeLineHash,
-  excelSerialToISODate,
   isCreditNote,
   isFleetOutlier,
   normalizeBranchName,
   normalizeLossReason,
   normalizeModelName,
 } from "@/lib/engine/clean";
+import { sheetRows, toISODate, toNumber, toText } from "@/lib/sources/cells";
 import type {
   ImportStats,
   NormalizedBulletin,
@@ -22,36 +21,21 @@ import type {
 
 const DEFAULT_FLEET_OUTLIER_MIN_UNITS = 10;
 
-type Row = Record<string, unknown>;
-
-function sheetRows(workbook: XLSX.WorkBook, sheetName: string): Row[] {
-  const sheet = workbook.Sheets[sheetName];
-  if (!sheet) return [];
-  return XLSX.utils.sheet_to_json<Row>(sheet, { defval: null });
-}
-
-function toISODate(value: unknown): string | null {
-  if (value === null || value === undefined || value === "") return null;
-  if (typeof value === "number") return excelSerialToISODate(value);
-  if (value instanceof Date) return value.toISOString().slice(0, 10);
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    return trimmed === "" ? null : trimmed;
-  }
-  return null;
-}
-
-function toText(value: unknown): string | null {
-  if (value === null || value === undefined) return null;
-  const text = collapseSpaces(String(value));
-  return text === "" ? null : text;
-}
-
-function toNumber(value: unknown): number | null {
-  if (value === null || value === undefined || value === "") return null;
-  const n = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(n) ? n : null;
-}
+// Columnas de Leads que definen el contenido de una oportunidad (su line_hash).
+const LEAD_COLUMNS = [
+  "Fecha creación",
+  "Fecha cierre",
+  "Sucursal",
+  "Vendedor",
+  "Tipo de cliente",
+  "Modelo de interés",
+  "Versión de interés",
+  "Unidades",
+  "Resultado",
+  "Motivo de pérdida",
+  "Modelo comprado (si difiere)",
+  "Versión comprada (si difiere)",
+] as const;
 
 interface ParseOptions {
   fleetOutlierMinUnits?: number;
@@ -119,6 +103,7 @@ export function parseWorkbook(
 
     sales.push({
       invoice,
+      businessKey: computeLineHash([invoice, model.normalized ?? model.raw, version, color]),
       lineHash,
       date,
       branchNameRaw,
@@ -156,21 +141,20 @@ export function parseWorkbook(
   // Un ID Oportunidad repetido es la misma oportunidad: se conserva la primera
   // fila para no contar dos veces una venta perdida o una sustitución.
   const leadRows = sheetRows(workbook, "Leads");
-  const seenLeadIds = new Set<string>();
-  const uniqueLeadRows = leadRows.filter((row) => {
+  const leadRowsById = new Map<string, (typeof leadRows)[number]>();
+  for (const row of leadRows) {
     const id = toText(row["ID Oportunidad"]) ?? "";
-    if (seenLeadIds.has(id)) return false;
-    seenLeadIds.add(id);
-    return true;
-  });
-  const leads: NormalizedLead[] = uniqueLeadRows.map((row) => {
+    if (!leadRowsById.has(id)) leadRowsById.set(id, row);
+  }
+  const leads: NormalizedLead[] = [...leadRowsById].map(([externalId, row]) => {
     const model = resolveModel(row["Modelo de interés"]);
     const boughtRaw = toText(row["Modelo comprado (si difiere)"]);
     const bought = boughtRaw ? resolveModel(boughtRaw) : null;
     const lossReasonRaw = toText(row["Motivo de pérdida"]);
     const branchNameRaw = toText(row["Sucursal"]);
     return {
-      externalId: toText(row["ID Oportunidad"]) ?? "",
+      externalId,
+      lineHash: computeLineHash(LEAD_COLUMNS.map((column) => toText(row[column]))),
       createdAt: toISODate(row["Fecha creación"]),
       closedAt: toISODate(row["Fecha cierre"]),
       branchNameRaw,
@@ -202,11 +186,10 @@ export function parseWorkbook(
     const status = toText(row["Estado"]);
     const receivedAt = toISODate(row["Fecha de recepción"]);
 
-    const lineHash = computeLineHash([orderNo, orderDate, model.raw, version, color, units, eta]);
-
     return {
       orderNo,
-      lineHash,
+      businessKey: computeLineHash([orderNo, model.normalized ?? model.raw, version, color]),
+      lineHash: computeLineHash([orderNo, orderDate, model.raw, version, color, units, eta, status, receivedAt]),
       orderDate,
       modelNameRaw: model.raw,
       modelName: model.normalized,
@@ -251,7 +234,7 @@ export function parseWorkbook(
     ventasFilasLeidas: ventasRows.length,
     ventasDuplicadosEliminados: duplicadosEliminados,
     ventasNotasCreditoAplicadas: notasCreditoAplicadas,
-    leadsDuplicadosEliminados: leadRows.length - uniqueLeadRows.length,
+    leadsDuplicadosEliminados: leadRows.length - leadRowsById.size,
   };
 
   return { sales, inventory, leads, factoryOrders, bulletins, economics, stats };

@@ -5,6 +5,7 @@ import type { NormalizedLead, NormalizedSale } from "@/lib/sources/types";
 function sale(partial: Partial<NormalizedSale>): NormalizedSale {
   return {
     invoice: "FAC-1",
+    businessKey: "bk",
     lineHash: Math.random().toString(),
     date: "2026-01-15",
     branchNameRaw: null,
@@ -28,6 +29,7 @@ function sale(partial: Partial<NormalizedSale>): NormalizedSale {
 function lead(partial: Partial<NormalizedLead>): NormalizedLead {
   return {
     externalId: Math.random().toString(),
+    lineHash: "lh",
     createdAt: "2026-01-01",
     closedAt: "2026-01-10",
     branchNameRaw: null,

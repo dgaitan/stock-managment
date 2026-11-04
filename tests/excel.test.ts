@@ -208,6 +208,36 @@ describe("parseWorkbook", () => {
     expect(result.stats.leadsDuplicadosEliminados).toBe(1);
   });
 
+  it("da a cada hecho una clave estable entre importaciones", () => {
+    // Siguiente ciclo: el pedido cambia de ETA y estado, el lead de resultado y la
+    // venta de precio. La clave se mantiene y el line_hash cambia: se actualiza la fila.
+    const next = buildWorkbook();
+    XLSX.utils.sheet_add_aoa(next.Sheets["Pedidos"], [[45260, "En tránsito"]], { origin: "G2" });
+    XLSX.utils.sheet_add_aoa(next.Sheets["Leads"], [["Ganada"]], { origin: "J2" });
+    XLSX.utils.sheet_add_aoa(next.Sheets["Ventas"], [[41000]], { origin: "K2" });
+    const updated = parseWorkbook(next, CANONICAL_MODELS, { fleetOutlierMinUnits: 10 });
+
+    const [order, orderNext] = [result.factoryOrders[0], updated.factoryOrders[0]];
+    expect(orderNext.businessKey).toBe(order.businessKey);
+    expect(orderNext.lineHash).not.toBe(order.lineHash);
+
+    const [lead, leadNext] = [result.leads[0], updated.leads[0]];
+    expect(leadNext.externalId).toBe(lead.externalId);
+    expect(leadNext.lineHash).not.toBe(lead.lineHash);
+
+    const sale = result.sales.find((s) => s.invoice === "FAC-1");
+    const saleNext = updated.sales.find((s) => s.invoice === "FAC-1");
+    expect(saleNext?.businessKey).toBe(sale?.businessKey);
+    expect(saleNext?.lineHash).not.toBe(sale?.lineHash);
+  });
+
+  it("el mismo archivo produce las mismas claves y hashes", () => {
+    const again = parseWorkbook(buildWorkbook(), CANONICAL_MODELS, { fleetOutlierMinUnits: 10 });
+    expect(again.sales.map((s) => [s.businessKey, s.lineHash])).toEqual(result.sales.map((s) => [s.businessKey, s.lineHash]));
+    expect(again.leads.map((l) => l.lineHash)).toEqual(result.leads.map((l) => l.lineHash));
+    expect(again.factoryOrders.map((o) => o.lineHash)).toEqual(result.factoryOrders.map((o) => o.lineHash));
+  });
+
   it("cuenta los modelos detectados en ventas", () => {
     expect(result.stats.modelosDetectados).toBe(3);
   });
