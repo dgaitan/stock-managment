@@ -6,8 +6,12 @@ Entrega: jueves 5 de noviembre de 2026, 6:00 p.m.
 ## Reglas
 
 - El motor (`lib/engine`) es TypeScript puro: sin imports de Next, React ni DB.
-  Recibe datos normalizados y devuelve resultados. Todo parámetro sale de
-  `config/cycle.yaml` (cargado vía `lib/engine/config.ts`), nunca hardcodeado.
+  Recibe datos normalizados y devuelve resultados. Ningún parámetro hardcodeado:
+  hoy salen de `config/cycle.yaml` (vía `lib/engine/config.ts`). **Acordado:** lo
+  que cambia por ciclo (corte, ventana, mes de llegada, lotes, regla RAV4) pasa a
+  derivarse de los datos y de los comunicados vigentes; el YAML queda solo con
+  supuestos de pronóstico (pesos, z, umbrales). No agregar fechas ni meses fijos
+  («febrero», «2026-10») en código nuevo.
 - La IA nunca decide ni escribe cantidades. Puede (a) sugerir alias que el usuario
   confirma (`lib/ai/mapper.ts`), (b) extraer reglas de los comunicados y traducir
   las consideraciones del usuario a **parámetros acotados validados con zod**
@@ -22,6 +26,12 @@ Entrega: jueves 5 de noviembre de 2026, 6:00 p.m.
 - **Mensajes de commit en inglés** (asunto en imperativo, p. ej.
   `Add order table organism`), aunque el código y la UI estén en español.
 - UI: shadcn/ui, textos en español, una sola página (SPA) con drawers (`Sheet`).
+  Diseño aprobado (Claude Design, «Pedido a fábrica — Dashboard (Caso 1)»): el
+  dashboard responde solo «¿cuánto pedir de cada modelo?» — tabla de 4 columnas
+  (modelo, pedido, capital, motivo), sin KPIs ni gráfica; el detalle va en «Ver
+  por qué». «Calcular pedido» es un stepper de 3 pasos (comunicados y reglas →
+  reglas adicionales → confirmar). Menos datos en pantalla es mejor. «Nuevo
+  registro» queda fuera del MVP.
 - **Base de datos: Postgres, no SQLite.** El plan original (`docs/PLAN.md`)
   asumía SQLite + Docker/VPS; se cambió a Vercel, así que la persistencia es
   Postgres instalado localmente (sin Docker — Postgres.app en :5432) para dev,
@@ -38,8 +48,14 @@ Entrega: jueves 5 de noviembre de 2026, 6:00 p.m.
   quiebre. Detalle en `docs/PLAN.md` § «Lógica del motor».
 - El pedido es por modelo (lotes de fábrica). La mezcla por versión es una
   sugerencia aparte, pendiente de confirmar; el color no entra al cálculo.
-- Idempotencia de importación por `line_hash` — reimportar el mismo Excel no
-  duplica filas en `sales` / `factory_orders`.
+- Importación por **clave de negocio** (`business_key` en ventas y pedidos,
+  `external_id` en leads) + `line_hash` del contenido: reimportar el mismo Excel
+  no cambia nada; un archivo de otro ciclo inserta lo nuevo y **actualiza** lo que
+  cambió (resultado de un lead, ETA o estado de un pedido), nunca duplica. El
+  inventario se reemplaza solo en los meses que trae el archivo. Los comunicados
+  son un CRUD propio: la importación solo agrega los que no existen (fecha +
+  asunto), nunca borra ni sobrescribe. Siempre vista previa antes de escribir
+  (`lib/db/importWorkbook.ts`).
 
 ## Convenciones de código
 
@@ -61,9 +77,11 @@ violación que reporte. Una tarea con resultado FALLA no está terminada.
 ## Comandos
 
 - `bun run dev` — servidor de desarrollo
-- `bun test` — Vitest (motor y limpieza)
+- `bun run test` — Vitest (motor, limpieza e importación). Ojo: `bun test` a
+  secas usa el runner de Bun, no Vitest
 - `bun run db:generate` / `bun run db:migrate` — migraciones Drizzle
-- `bun run seed` — carga `data/seed/caso1.xlsx` a la base
+- `bun run seed [-- <xlsx>]` — importa el Excel (por defecto `data/seed/caso1.xlsx`):
+  muestra qué cambia por hoja y no escribe nada si no hay cambios
 - `bun run pedido -- <xlsx>` — CLI que imprime la tabla de pedido por modelo
 - `bun run backtest` — backtest con 4 cortes (WAPE por modelo); escribe `docs/BACKTEST.md`
 - `bun run crosscheck` — validación independiente: recalcula cifras clave desde el
@@ -76,7 +94,14 @@ Vercel + Neon. Variables de entorno (`DATABASE_URL`, `ADMIN_EMAIL`,
 `ADMIN_PASSWORD`, `SESSION_SECRET`, `ANTHROPIC_API_KEY` opcional) se configuran
 en el proyecto de Vercel, nunca en el repo. `DATABASE_URL` de Neon debe ser el
 connection string "pooled" (las funciones serverless de Vercel abren muchas
-conexiones cortas).
+conexiones cortas). Migrar Neon **vacío**: la migración 0002 agrega columnas
+`NOT NULL` sin default y falla sobre tablas con filas.
+
+## Alcance de la entrega
+
+Los dos casos son obligatorios. Caso 2 (Capesa): análisis reproducible +
+prototipo descrito + sección del Word, sin segunda app; sus datos aún no están en
+`data/seed/`. Ver `docs/PLAN.md` § «Caso 2».
 
 ## Fases
 
