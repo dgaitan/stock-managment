@@ -31,6 +31,7 @@ export interface ModelOrderPlan {
   forecastMonthlyRate: number;
   monthlyStdDev: number;
   hasSeasonalIndex: boolean;
+  forecastByMonth: Record<string, number>; // "YYYY-MM" -> unidades pronosticadas (oct-ene y ventana de cobertura)
   octEneMonths: string[];
   coverageMonths: string[];
   demandOctEne: number;
@@ -204,6 +205,7 @@ export function computeModelOrderPlan(params: {
     forecastMonthlyRate: forecast.baseMonthlyRate,
     monthlyStdDev: forecast.monthlyStdDev,
     hasSeasonalIndex: forecast.seasonalIndex !== null,
+    forecastByMonth: forecast.forecastByMonth,
     octEneMonths,
     coverageMonths,
     demandOctEne,

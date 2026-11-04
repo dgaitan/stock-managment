@@ -8,6 +8,7 @@ function basePlan(partial: Partial<ModelOrderPlan>): ModelOrderPlan {
     forecastMonthlyRate: 15,
     monthlyStdDev: 3,
     hasSeasonalIndex: true,
+    forecastByMonth: {},
     octEneMonths: ["2026-10", "2026-11", "2026-12", "2027-01"],
     coverageMonths: ["2027-02", "2027-03", "2027-04"],
     demandOctEne: 60,
