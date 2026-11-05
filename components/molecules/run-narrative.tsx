@@ -4,7 +4,7 @@ export function RunNarrative({ narrative }: { narrative: string }) {
   const alerts = lines.filter((l) => l.startsWith("- ")).map((l) => l.slice(2));
   const analysis = lines.filter((l) => !l.startsWith("- ")).join(" ");
   return (
-    <div className="flex flex-col gap-1.5 px-6 pb-4 text-sm">
+    <div className="flex flex-col gap-1.5 text-sm">
       <p>{analysis}</p>
       {alerts.length > 0 ? (
         <ul className="list-disc pl-5 text-muted-foreground">

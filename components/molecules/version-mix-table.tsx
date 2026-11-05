@@ -1,3 +1,4 @@
+import { InfoTip } from "@/components/molecules/info-tip";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { VersionMixRow } from "@/lib/engine/versionmix";
@@ -7,13 +8,14 @@ export function VersionMixTable({ rows, windowLabel }: { rows: VersionMixRow[]; 
   return (
     <section className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Mezcla sugerida por versión</h3>
+        <h3 className="flex items-center gap-1 text-sm font-semibold">
+          Mezcla sugerida por versión
+          <InfoTip label="Cómo se reparte">
+            La fábrica acepta cualquier mezcla dentro del modelo. Reparto proporcional a ventas y leads perdidos por falta de stock en {windowLabel}.
+          </InfoTip>
+        </h3>
         <Badge variant="secondary">Propuesta · por confirmar</Badge>
       </div>
-      <p className="text-xs text-muted-foreground">
-        La fábrica acepta cualquier mezcla dentro del modelo. Reparto proporcional a ventas y leads perdidos por falta
-        de stock en {windowLabel}.
-      </p>
       <Table>
         <TableHeader>
           <TableRow>

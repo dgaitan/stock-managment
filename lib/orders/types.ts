@@ -54,6 +54,7 @@ export interface ActiveRule {
 /** Lo que necesita el diálogo «Calcular pedido» para armar sus pasos. */
 export interface CalculationContext {
   window: string;
+  cutoffDate: string;
   arrivalMonth: string;
   models: string[];
   months: string[]; // meses que cubre el cálculo (hasta la llegada y la cobertura); una consideración solo puede apuntar a ellos

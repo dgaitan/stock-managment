@@ -46,6 +46,7 @@ export async function loadCalculationContext(): Promise<CalculationContext> {
   const { cycle } = inputs;
   return {
     window: cycle.window,
+    cutoffDate: cycle.cutoffDate,
     arrivalMonth: cycle.arrivalMonth,
     models: inputs.models.map((m) => m.name),
     months: [...cycle.gapMonths, ...cycle.coverageMonths],

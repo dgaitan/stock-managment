@@ -1,6 +1,8 @@
+import { InfoTip } from "@/components/molecules/info-tip";
+import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ruleKeyLabel, ruleValueLabel } from "@/lib/bulletins/labels";
-import { formatIsoDate } from "@/lib/format";
+import { groupRulesByBulletin } from "@/lib/orders/ruleGroups";
 import type { ActiveRule } from "@/lib/orders/types";
 
 type RulesStepProps = {
@@ -9,45 +11,35 @@ type RulesStepProps = {
   onToggle: (id: number) => void;
 };
 
-function originOf(rule: ActiveRule): { id: string; title: string } {
-  return rule.bulletin
-    ? { id: `${rule.bulletin.date}|${rule.bulletin.subject}`, title: `${rule.bulletin.subject} · ${formatIsoDate(rule.bulletin.date)}` }
-    : { id: "seed", title: "Semilla inicial (sin comunicado vinculado)" };
-}
-
-/** Reglas vigentes por comunicado de origen. Las opcionales se pueden omitir solo en este cálculo. */
+/** Lista de reglas vigentes: marcada = se aplica; desmarcar la excluye solo de este cálculo. */
 export function RulesStep({ rules, omitted, onToggle }: RulesStepProps) {
-  const groups = new Map<string, { title: string; required: number; optional: ActiveRule[] }>();
-  for (const rule of rules) {
-    const origin = originOf(rule);
-    const group = groups.get(origin.id) ?? { title: origin.title, required: 0, optional: [] };
-    if (rule.required) group.required += 1;
-    else group.optional.push(rule);
-    groups.set(origin.id, group);
-  }
-
-  if (rules.length === 0) {
-    return <p className="text-sm text-muted-foreground">No hay reglas vigentes para esta ventana.</p>;
-  }
+  if (rules.length === 0) return <p className="text-sm text-muted-foreground">Sin reglas vigentes.</p>;
 
   return (
-    <div className="flex flex-col gap-4">
-      <p className="text-sm text-muted-foreground">
-        Estas reglas vienen de los comunicados vigentes. Marca una para omitirla solo en este cálculo.
-      </p>
-      {[...groups.entries()].map(([id, group]) => (
-        <section key={id} className="flex flex-col gap-1.5" aria-label={group.title}>
-          <h3 className="text-sm font-semibold">{group.title}</h3>
-          {group.required > 0 ? (
-            <p className="text-xs text-muted-foreground">{group.required} reglas de lote, obligatorias.</p>
-          ) : null}
+    <div className="overflow-hidden rounded-lg border">
+      {groupRulesByBulletin(rules).map((group) => (
+        <section key={`${group.origin}-${group.title}`} aria-label={group.title} className="border-b last:border-b-0">
+          <div className="flex items-center gap-2 bg-muted/40 px-3.5 py-2">
+            <h3 className="text-[13px] font-medium">{group.title}</h3>
+            <span className="text-xs text-muted-foreground">{group.origin}</span>
+            {group.required > 0 ? (
+              <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
+                {group.required} de lote
+                <InfoTip label="Reglas obligatorias">Los lotes y mínimos de fábrica no se pueden excluir.</InfoTip>
+              </span>
+            ) : null}
+          </div>
           {group.optional.map((rule) => (
-            <label key={rule.id} className="flex items-center gap-2 text-sm">
-              <Checkbox checked={omitted.includes(rule.id)} onCheckedChange={() => onToggle(rule.id)} />
-              <span className={omitted.includes(rule.id) ? "text-muted-foreground line-through" : undefined}>
+            <label key={rule.id} className="flex cursor-pointer items-center gap-3 border-t px-3.5 py-3 text-[13px]">
+              <Checkbox checked={!omitted.includes(rule.id)} onCheckedChange={() => onToggle(rule.id)} />
+              <span className="flex-1">
                 {rule.model} · {ruleKeyLabel(rule.key)}: {ruleValueLabel(rule.key, rule.value)}
               </span>
-              <span className="text-xs text-muted-foreground">{omitted.includes(rule.id) ? "omitida" : "se aplica"}</span>
+              {rule.bulletin ? (
+                <Badge variant="outline" className="border-blue-200 bg-blue-100 text-blue-900">
+                  Extraída por IA
+                </Badge>
+              ) : null}
             </label>
           ))}
         </section>

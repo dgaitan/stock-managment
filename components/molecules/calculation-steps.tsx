@@ -1,11 +1,15 @@
+import { InfoTip } from "@/components/molecules/info-tip";
 import { formatMonthRangeLabel } from "@/lib/engine/explain";
 import { formatDecimal, formatInt, formatUsd } from "@/lib/format";
 import type { OrderLineDetail } from "@/lib/orders/types";
 
-function Step({ label, value }: { label: string; value: string }) {
+function Step({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="flex justify-between gap-4 border-b py-2 text-sm">
-      <dt className="text-muted-foreground">{label}</dt>
+    <div className="flex justify-between gap-4 border-b py-2 text-[13px]">
+      <dt className="flex items-center gap-1 text-muted-foreground">
+        {label}
+        {hint ? <InfoTip label={`Qué significa: ${label}`}>{hint}</InfoTip> : null}
+      </dt>
       <dd className="text-right font-medium tabular-nums">{value}</dd>
     </div>
   );
@@ -18,15 +22,26 @@ export function CalculationSteps({ detail, capital }: { detail: OrderLineDetail;
   const arrival = formatMonthRangeLabel([plan.arrivalMonth]);
 
   return (
-    <section className="flex flex-col gap-2">
-      <h3 className="text-sm font-semibold">Cálculo paso a paso</h3>
+    <section className="flex flex-col gap-1">
+      <h3 className="flex items-center gap-1 text-sm font-semibold">
+        Cálculo paso a paso
+        <InfoTip label="Fórmula del pedido">
+          Necesidad = demanda {coverage} + seguridad − stock a {arrival}. El pedido es la necesidad redondeada al lote
+          (mínimo y múltiplo).
+        </InfoTip>
+      </h3>
       <dl>
         <Step label="Patio + tránsito" value={`${formatInt(plan.patioAtCutoff)} + ${formatInt(plan.transitoAtCutoff)}`} />
-        <Step label={`Demanda proyectada ${gap}`} value={`${formatDecimal(plan.demandGap)} u.`} />
-        <Step label={`Stock a ${arrival} (mes a mes, nunca menor a 0)`} value={`${formatDecimal(plan.projectedStockAtArrival)} u.`} />
+        <Step label={`Demanda ${gap}`} value={`${formatDecimal(plan.demandGap)} u.`} />
         <Step
-          label={`Demanda no atendida ${gap}`}
-          value={`${formatDecimal(plan.unmetDemandGap)} u. · venta perdida, no se suma al pedido`}
+          label={`Stock a ${arrival}`}
+          value={`${formatDecimal(plan.projectedStockAtArrival)} u.`}
+          hint="Simulación mes a mes con las llegadas (ETA); nunca baja de 0."
+        />
+        <Step
+          label="Demanda no atendida"
+          value={`${formatDecimal(plan.unmetDemandGap)} u.`}
+          hint={`Ventas que se pierden entre ${gap} por falta de stock. No se suman al pedido.`}
         />
         <Step label={`Demanda ${coverage}`} value={`${formatDecimal(plan.demandCoverageWindow)} u.`} />
         <Step label="Stock de seguridad" value={`${formatDecimal(plan.safetyStockUnits)} u.`} />
@@ -34,7 +49,11 @@ export function CalculationSteps({ detail, capital }: { detail: OrderLineDetail;
           label="Necesidad"
           value={`${formatDecimal(plan.demandCoverageWindow)} + ${formatDecimal(plan.safetyStockUnits)} − ${formatDecimal(plan.projectedStockAtArrival)} = ${formatDecimal(plan.need)}`}
         />
-        <Step label={`Lote (mín ${lot.min} / múltiplo ${lot.multiple})`} value={`${formatDecimal(Math.max(plan.need, 0))} → ${formatInt(plan.orderUnits)}`} />
+        <Step
+          label="Redondeo a lote"
+          value={`${formatDecimal(Math.max(plan.need, 0))} → ${formatInt(plan.orderUnits)}`}
+          hint={`Lote del modelo: mínimo ${lot.min}, múltiplo ${lot.multiple}.`}
+        />
       </dl>
       <p className="flex justify-between pt-2 font-semibold">
         <span>Pedido sugerido</span>

@@ -1,3 +1,4 @@
+import { InfoTip } from "@/components/molecules/info-tip";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -10,19 +11,21 @@ type ConsiderationsStepProps = {
 export function ConsiderationsStep({ text, onChange, disabled }: ConsiderationsStepProps) {
   return (
     <div className="flex flex-col gap-2">
-      <Label htmlFor="considerations">Reglas adicionales (opcional)</Label>
+      <Label htmlFor="considerations">
+        Reglas adicionales (opcional)
+        <InfoTip label="Cómo se interpretan">
+          La IA lo traduce a parámetros acotados: demanda × factor por modelo y meses, o excluir un modelo. Lo que el
+          motor no entiende queda como «no se aplica». La IA nunca escribe cantidades.
+        </InfoTip>
+      </Label>
       <Textarea
         id="considerations"
-        rows={7}
+        rows={6}
         value={text}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="Promociones, topes, noticias de fábrica… por ejemplo: «Hay promoción de un modelo en dos meses y esperamos 30 % más de demanda» o «No pedir un modelo este ciclo»."
+        placeholder="Ej.: «Promoción de Hilux en feb–abr, esperamos 20 % más de demanda»"
       />
-      <p className="text-xs text-muted-foreground">
-        La IA lo traduce a parámetros acotados (demanda × factor y excluir un modelo). Lo que el motor no entiende se
-        marca como «no aplicada»; la IA nunca escribe cantidades. Déjalo vacío para omitir este paso.
-      </p>
     </div>
   );
 }

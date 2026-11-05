@@ -3,6 +3,7 @@
 import { ArchiveIcon, ArchiveRestoreIcon, ArrowLeftIcon, SparklesIcon } from "lucide-react";
 import { BulletinForm } from "@/components/molecules/bulletin-form";
 import { RulesPreviewList } from "@/components/molecules/rules-preview";
+import { InfoTip } from "@/components/molecules/info-tip";
 import { Button } from "@/components/ui/button";
 import { draftFrom, useBulletinEditor } from "@/hooks/use-bulletin-editor";
 import { ruleKeyLabel, ruleValueLabel } from "@/lib/bulletins/labels";
@@ -64,20 +65,21 @@ export function BulletinEditor({ bulletin, today, aiEnabled, onBack, onSaved }: 
 
       <section className="flex flex-col gap-3 border-t pt-5" aria-label="Reglas del comunicado">
         <div className="flex items-center justify-between gap-3">
-          <h3 className="text-sm font-semibold">Reglas que el motor toma de este comunicado</h3>
+          <h3 className="flex items-center gap-1 text-sm font-semibold">
+            Reglas del comunicado
+            <InfoTip label="Qué son">Las reglas que el motor toma de este comunicado.</InfoTip>
+          </h3>
           <Button
             variant="outline"
             size="sm"
             onClick={editor.extract}
             disabled={editor.pending || !aiEnabled || savedId === null}
+            title={aiEnabled ? undefined : "Requiere ANTHROPIC_API_KEY"}
           >
             <SparklesIcon data-icon="inline-start" />
             Extraer con IA
           </Button>
         </div>
-        {!aiEnabled ? (
-          <p className="text-xs text-muted-foreground">Sin ANTHROPIC_API_KEY no se pueden extraer reglas con IA.</p>
-        ) : null}
         {editor.preview ? (
           <div className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-3">
             <RulesPreviewList preview={editor.preview} />
@@ -102,7 +104,7 @@ export function BulletinEditor({ bulletin, today, aiEnabled, onBack, onSaved }: 
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-muted-foreground">Este comunicado aún no tiene reglas guardadas.</p>
+          <p className="text-sm text-muted-foreground">Sin reglas guardadas</p>
         )}
       </section>
     </div>

@@ -3,6 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { InfoTip } from "@/components/molecules/info-tip";
 import { CalculationSteps } from "@/components/molecules/calculation-steps";
 import { VersionMixTable } from "@/components/molecules/version-mix-table";
 import { formatDecimal, formatInt, formatIsoDate, formatTimestamp } from "@/lib/format";
@@ -30,8 +31,9 @@ export function WhySheet({ line, run }: WhySheetProps) {
       <SheetTrigger render={<Button variant="ghost" size="sm" />}>Ver por qué</SheetTrigger>
       <SheetContent className="data-[side=right]:sm:max-w-xl">
         <SheetHeader className="border-b p-6">
-          <SheetTitle className="text-lg">
+          <SheetTitle className="flex items-center gap-1.5 text-lg">
             ¿Por qué {formatInt(line.orderUnits)} unidades de {line.modelName}?
+                      <InfoTip label="Resumen del motor">{line.explanation}</InfoTip>
           </SheetTitle>
           <SheetDescription>
             Análisis v{run.version} · {formatTimestamp(run.createdAt)} · datos al {formatIsoDate(run.cutoffDate)}
@@ -40,11 +42,10 @@ export function WhySheet({ line, run }: WhySheetProps) {
         <div className="flex flex-1 flex-col gap-5 overflow-auto px-6 pb-6">
           {plan.imputedStockoutMonths > 0 ? (
             <div className="flex gap-1.5">
-              <Badge variant="destructive">Demanda oculta por quiebre</Badge>
+              <Badge variant="outline" className="border-amber-200 bg-amber-100 text-amber-900">Demanda oculta por quiebre</Badge>
               <Badge variant="outline">{plan.imputedStockoutMonths} meses imputados</Badge>
             </div>
           ) : null}
-          <p className="text-sm leading-relaxed">{line.explanation}</p>
           <div className="flex gap-2">
             <Stat value={formatInt(plan.patioAtCutoff)} label="en patio al corte" />
             <Stat value={formatInt(plan.transitoAtCutoff)} label="en tránsito" />

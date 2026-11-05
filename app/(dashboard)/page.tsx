@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { DashboardLayout } from "@/components/templates/dashboard-layout";
 import { BulletinsSheet } from "@/components/organisms/bulletins-sheet";
 import { CalculateDialog } from "@/components/organisms/calculate-dialog";
+import { ImportSheet } from "@/components/organisms/import-sheet";
 import { OrderTable } from "@/components/organisms/order-table";
 import { UserMenu } from "@/components/organisms/user-menu";
 import { WhySheet } from "@/components/organisms/why-sheet";
@@ -23,7 +24,12 @@ async function Dashboard() {
 
   return (
     <DashboardLayout
-      headerActions={<BulletinsSheet bulletins={bulletins} aiEnabled={isAiEnabled()} today={todayIsoDate()} />}
+      headerActions={
+        <>
+          <BulletinsSheet bulletins={bulletins} aiEnabled={isAiEnabled()} today={todayIsoDate()} />
+          <ImportSheet />
+        </>
+      }
       userMenu={<UserMenu email={session.email} />}
       title="¿Cuánto pedir a fábrica este ciclo?"
       subtitle={subtitle}

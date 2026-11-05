@@ -1,4 +1,4 @@
-import { RunNarrative } from "@/components/molecules/run-narrative";
+import { NarrativeDialog } from "@/components/molecules/narrative-dialog";
 import { ReasonCell } from "@/components/molecules/reason-cell";
 import { DeltaBadge } from "@/components/molecules/delta-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,22 +27,22 @@ export function OrderTable({ run, calculateAction, renderWhy }: OrderTableProps)
       <CardHeader className="flex flex-row items-center justify-between gap-4">
         <div className="flex flex-col gap-1">
           <CardTitle className="text-base">Pedido sugerido</CardTitle>
-          <p className="text-sm text-muted-foreground">
+          <p className="flex items-center gap-1 text-[13px] text-muted-foreground">
             {run ? (
               <>
                 <b className="font-semibold text-foreground">
                   {formatInt(run.totalUnits)} unidades · {formatUsdMillions(run.totalCapital)}
                 </b>{" "}
                 · Análisis v{run.version} · {formatTimestamp(run.createdAt)}
+                {run.narrative ? <NarrativeDialog narrative={run.narrative} /> : null}
               </>
             ) : (
-              "Aún no hay un análisis. Calcula el primero con los datos importados."
+              "Sin análisis todavía"
             )}
           </p>
         </div>
         {calculateAction}
       </CardHeader>
-      {run?.narrative ? <RunNarrative narrative={run.narrative} /> : null}
       {run ? (
         <CardContent className="px-0">
           <Table>

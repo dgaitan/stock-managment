@@ -34,11 +34,11 @@ export function RulesPreviewList({ preview }: { preview: RulesPreview }) {
           </TableBody>
         </Table>
       ) : (
-        <p className="text-sm text-muted-foreground">La IA no encontró reglas que el motor pueda aplicar.</p>
+        <p className="text-sm text-muted-foreground">Sin reglas aplicables</p>
       )}
       {preview.notExtracted.length > 0 ? (
         <div className="flex flex-col gap-1.5">
-          <p className="text-xs font-medium text-muted-foreground">No se aplica (el motor no lo entiende)</p>
+          <p className="text-xs font-medium text-muted-foreground">No se aplica</p>
           <ul className="flex flex-col gap-1 text-xs text-muted-foreground">
             {preview.notExtracted.map((item) => (
               <li key={`${item.text}-${item.reason}`}>
