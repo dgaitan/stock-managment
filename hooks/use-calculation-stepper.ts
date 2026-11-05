@@ -4,6 +4,7 @@ import { useReducer, useTransition } from "react";
 import type { ValidatedConsiderations } from "@/lib/ai/considerations";
 import { calculateOrderAction, interpretConsiderationsAction, loadCalculationContextAction } from "@/lib/orders/actions";
 import type { CalculationRequest } from "@/lib/orders/request";
+import { allOmitted } from "@/lib/orders/ruleGroups";
 import type { CalculationContext } from "@/lib/orders/types";
 
 export type Step = "rules" | "considerations" | "confirm" | "running" | "done";
@@ -22,7 +23,7 @@ export type StepperState = {
 type Action =
   | { type: "reset" }
   | { type: "loaded"; context: CalculationContext }
-  | { type: "toggleRule"; id: number }
+  | { type: "toggleRules"; ids: number[] }
   | { type: "setText"; text: string }
   | { type: "setSave"; value: boolean }
   | { type: "goto"; step: Step }
@@ -47,14 +48,14 @@ function reducer(state: StepperState, action: Action): StepperState {
       return INITIAL;
     case "loaded":
       return { ...state, context: action.context, error: null };
-    case "toggleRule":
-      return {
-        ...state,
-        omitted: state.omitted.includes(action.id) ? state.omitted.filter((i) => i !== action.id) : [...state.omitted, action.id],
-      };
+    case "toggleRules": {
+      // Un comunicado se activa o se excluye completo: si todas sus reglas estaban omitidas, vuelven; si no, se omiten.
+      const rest = state.omitted.filter((id) => !action.ids.includes(id));
+      return { ...state, omitted: allOmitted(action.ids, state.omitted) ? rest : [...rest, ...action.ids] };
+    }
     case "setText":
       // Si cambia el texto, la interpretación mostrada ya no le corresponde.
-      return { ...state, text: action.text, interpretation: null, saveAsBulletin: false };
+      return { ...state, text: action.text, interpretation: null };
     case "setSave":
       return { ...state, saveAsBulletin: action.value };
     case "goto":
@@ -128,6 +129,9 @@ export function useCalculationStepper() {
     });
   };
 
+  /** «Omitir»: sigue sin reglas adicionales aunque haya texto escrito. */
+  const skip = () => dispatch({ type: "interpreted", interpretation: null });
+
   const back = () => {
     if (state.step === "confirm") dispatch({ type: "goto", step: state.context?.aiEnabled ? "considerations" : "rules" });
     else if (state.step === "considerations") dispatch({ type: "goto", step: "rules" });
@@ -148,9 +152,10 @@ export function useCalculationStepper() {
     pending,
     open,
     next,
+    skip,
     back,
     calculate,
-    toggleRule: (id: number) => dispatch({ type: "toggleRule", id }),
+    toggleRules: (ids: number[]) => dispatch({ type: "toggleRules", ids }),
     setText: (text: string) => dispatch({ type: "setText", text }),
     setSave: (value: boolean) => dispatch({ type: "setSave", value }),
   };

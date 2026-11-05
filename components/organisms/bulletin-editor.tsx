@@ -24,7 +24,7 @@ export function BulletinEditor({ bulletin, today, aiEnabled, onBack, onSaved }: 
   const rules = bulletin?.rules ?? [];
 
   return (
-    <div className="flex flex-1 flex-col gap-5 overflow-auto px-6 pb-6">
+    <div className="flex flex-1 flex-col gap-5 overflow-auto px-6 py-5">
       <Button variant="ghost" size="sm" className="self-start" onClick={onBack}>
         <ArrowLeftIcon data-icon="inline-start" />
         Comunicados

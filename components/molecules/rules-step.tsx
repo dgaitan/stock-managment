@@ -1,49 +1,58 @@
-import { InfoTip } from "@/components/molecules/info-tip";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ruleKeyLabel, ruleValueLabel } from "@/lib/bulletins/labels";
-import { groupRulesByBulletin } from "@/lib/orders/ruleGroups";
-import type { ActiveRule } from "@/lib/orders/types";
+import { isGroupActive, type RuleGroup } from "@/lib/orders/ruleGroups";
 
 type RulesStepProps = {
-  rules: ActiveRule[];
+  groups: RuleGroup[];
   omitted: number[];
-  onToggle: (id: number) => void;
+  onToggle: (ids: number[]) => void;
+  onManageBulletins: () => void;
 };
 
-/** Lista de reglas vigentes: marcada = se aplica; desmarcar la excluye solo de este cálculo. */
-export function RulesStep({ rules, omitted, onToggle }: RulesStepProps) {
-  if (rules.length === 0) return <p className="text-sm text-muted-foreground">Sin reglas vigentes.</p>;
+function describe(group: RuleGroup): string {
+  const optional = group.optional.map((r) => `${r.model} · ${ruleKeyLabel(r.key)}: ${ruleValueLabel(r.key, r.value)}`);
+  const lots = group.required > 0 ? [`${group.required} reglas de lote (mínimo y múltiplo por modelo), obligatorias`] : [];
+  return [...lots, ...optional].join("; ");
+}
 
+/** Una fila por comunicado: marcada = se aplica; desmarcar la excluye solo de este cálculo. Los lotes no se excluyen. */
+export function RulesStep({ groups, omitted, onToggle, onManageBulletins }: RulesStepProps) {
   return (
-    <div className="overflow-hidden rounded-lg border">
-      {groupRulesByBulletin(rules).map((group) => (
-        <section key={`${group.origin}-${group.title}`} aria-label={group.title} className="border-b last:border-b-0">
-          <div className="flex items-center gap-2 bg-muted/40 px-3.5 py-2">
-            <h3 className="text-[13px] font-medium">{group.title}</h3>
-            <span className="text-xs text-muted-foreground">{group.origin}</span>
-            {group.required > 0 ? (
-              <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
-                {group.required} de lote
-                <InfoTip label="Reglas obligatorias">Los lotes y mínimos de fábrica no se pueden excluir.</InfoTip>
-              </span>
-            ) : null}
-          </div>
-          {group.optional.map((rule) => (
-            <label key={rule.id} className="flex cursor-pointer items-center gap-3 border-t px-3.5 py-3 text-[13px]">
-              <Checkbox checked={!omitted.includes(rule.id)} onCheckedChange={() => onToggle(rule.id)} />
-              <span className="flex-1">
-                {rule.model} · {ruleKeyLabel(rule.key)}: {ruleValueLabel(rule.key, rule.value)}
-              </span>
-              {rule.bulletin ? (
-                <Badge variant="outline" className="border-blue-200 bg-blue-100 text-blue-900">
-                  Extraída por IA
-                </Badge>
-              ) : null}
-            </label>
-          ))}
-        </section>
-      ))}
-    </div>
+    <>
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="text-[13px]">Estas reglas salen de los comunicados guardados. Desmarca una para excluirla solo de este cálculo.</p>
+        <Button variant="link" size="inline" className="font-normal" onClick={onManageBulletins}>
+          Gestionar comunicados
+        </Button>
+      </div>
+      {groups.length === 0 ? (
+        <p className="text-[13px] text-muted-foreground">Sin reglas vigentes.</p>
+      ) : (
+        <div className="overflow-hidden rounded-lg border border-border">
+          {groups.map((group) => {
+            const ids = group.optional.map((r) => r.id);
+            const locked = ids.length === 0;
+            const checked = isGroupActive(group, omitted);
+            return (
+              <label
+                key={`${group.origin}-${group.title}`}
+                className={`flex items-start gap-3 border-b border-hairline px-3.5 py-3 last:border-b-0 ${locked ? "" : "cursor-pointer"}`}
+              >
+                <Checkbox className="mt-[3px]" checked={checked} disabled={locked} onCheckedChange={() => onToggle(ids)} />
+                <span className="flex flex-1 flex-col gap-0.5">
+                  <span className="text-[13px]">{describe(group)}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {group.title} · {group.origin}
+                  </span>
+                </span>
+                {group.fromBulletin ? <Badge variant="blue">De comunicado</Badge> : null}
+              </label>
+            );
+          })}
+        </div>
+      )}
+    </>
   );
 }

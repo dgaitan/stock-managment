@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { explainOrder, formatMonthRangeLabel } from "@/lib/engine/explain";
+import { explainLead, explainOrder, formatMonthRangeLabel } from "@/lib/engine/explain";
 import type { ModelOrderPlan } from "@/lib/engine/order";
 
 function basePlan(partial: Partial<ModelOrderPlan>): ModelOrderPlan {
@@ -60,7 +60,7 @@ describe("explainOrder", () => {
   it("avisa cuántos meses de quiebre se imputaron", () => {
     const text = explainOrder(basePlan({ imputedStockoutMonths: 9 }));
     expect(text).toContain("9 meses");
-    expect(text).toContain("quiebre");
+    expect(text).toContain("stock insuficiente");
   });
 
   it("usa el singular cuando se imputó un solo mes", () => {
@@ -68,7 +68,8 @@ describe("explainOrder", () => {
   });
 
   it("no menciona imputación cuando no hubo quiebres", () => {
-    expect(explainOrder(basePlan({}))).not.toContain("quiebre");
+    expect(explainOrder(basePlan({}))).not.toContain("stock insuficiente");
+    expect(explainOrder(basePlan({ imputedStockoutMonths: 9 }))).not.toContain("quiebre");
   });
 
   it("no menciona ventas perdidas cuando todo se atiende", () => {
@@ -92,5 +93,23 @@ describe("explainOrder", () => {
   it("avisa cuando no hay indice estacional", () => {
     const plan = basePlan({ hasSeasonalIndex: false });
     expect(explainOrder(plan)).toContain("sin ajuste estacional");
+  });
+});
+
+describe("explainLead", () => {
+  it("con meses de quiebre explica la demanda oculta", () => {
+    const text = explainLead(basePlan({ modelName: "Rush", imputedStockoutMonths: 6 }));
+    expect(text).toContain("Rush");
+    expect(text).toContain("6 meses");
+    expect(text).toContain("promedio de los meses con stock suficiente");
+  });
+  it("en la última ventana de la generación lo dice", () => {
+    const text = explainLead(basePlan({ modelName: "RAV4", flags: ["ultima_ventana_de_generacion"] }));
+    expect(text).toContain("última ventana");
+  });
+  it("sin excepciones resume demanda y stock a la llegada", () => {
+    expect(explainLead(basePlan({}))).toBe(
+      "Se proyecta una demanda de ~15 u/mes para Hilux. Con lo que hay en patio y en tránsito, el stock proyectado a feb 2027 es de 178 u.",
+    );
   });
 });

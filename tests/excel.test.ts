@@ -242,3 +242,46 @@ describe("parseWorkbook", () => {
     expect(result.stats.modelosDetectados).toBe(3);
   });
 });
+
+describe("parseWorkbook: datos que no entran al cálculo", () => {
+  const header = ["ID Oportunidad", "Fecha creación", "Modelo de interés", "Resultado", "Motivo de pérdida"];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(
+    wb,
+    XLSX.utils.aoa_to_sheet([
+      header,
+      ["OPP-1", 45196, "Hilux", "Perdida", "Agotado"],
+      ["OPP-2", 45196, "Hilux", "Perdida", "Agotado"],
+      ["OPP-3", 45196, "Corolla-Cross", "Perdida", "Sin stock"],
+      ["OPP-4", 45196, "Corolla-Cross", "Ganada", ""],
+    ]),
+    "Leads",
+  );
+  const { stats } = parseWorkbook(wb, CANONICAL_MODELS);
+
+  it("cuenta las filas con modelo sin mapear, no solo los nombres", () => {
+    expect(stats.modelosNoMapeados).toEqual(["Corolla-Cross"]);
+    expect(stats.filasModeloSinMapear).toBe(2);
+  });
+
+  it("reporta los motivos de pérdida que no están en el diccionario", () => {
+    expect(stats.motivosNoMapeados).toEqual(["Agotado"]);
+    expect(stats.leadsMotivoSinMapear).toBe(2);
+  });
+});
+
+describe("parseWorkbook: hojas presentes", () => {
+  it("marca qué hojas trae el archivo, para no reemplazar las que faltan", () => {
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["ID Oportunidad"]]), "Leads");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["No. pedido"]]), "Pedidos");
+    expect(parseWorkbook(wb, CANONICAL_MODELS).present).toEqual({
+      sales: false,
+      inventory: false,
+      leads: true,
+      factoryOrders: true,
+      bulletins: false,
+      economics: false,
+    });
+  });
+});

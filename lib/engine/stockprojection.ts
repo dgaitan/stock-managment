@@ -5,6 +5,7 @@
 // que el stock nunca baja de 0 ni se arrastra como deuda al pedido.
 // Ver docs/PLAN.md "Lógica del motor de pedido".
 
+import { isCancelledOrder } from "@/lib/engine/clean";
 import { compareMonthKeys, monthKey } from "@/lib/engine/months";
 import type { EngineFactoryOrder } from "@/lib/engine/inputs";
 
@@ -13,13 +14,14 @@ export interface StockProjection {
   unmetDemand: number; // demanda perdida por falta de stock en el período
 }
 
-/** Una línea de pedido está en tránsito al corte si se hizo antes del corte y aún no se había recibido. */
+/** Una línea de pedido está en tránsito al corte si se hizo antes del corte, aún no se había recibido y no está cancelada. */
 export function isInTransitAtCutoff(
   order: EngineFactoryOrder,
   modelName: string,
   cutoffDate: string,
 ): boolean {
   if (order.modelName !== modelName || order.orderDate === null || order.orderDate > cutoffDate) return false;
+  if (isCancelledOrder(order.status)) return false;
   return order.receivedAt === null || order.receivedAt > cutoffDate;
 }
 

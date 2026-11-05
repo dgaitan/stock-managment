@@ -20,7 +20,7 @@ export type EngineInventoryRow = Pick<NormalizedInventorySnapshot, "monthEnd" | 
 
 export type EngineFactoryOrder = Pick<
   NormalizedFactoryOrder,
-  "modelName" | "version" | "orderDate" | "units" | "eta" | "receivedAt"
+  "modelName" | "version" | "orderDate" | "units" | "eta" | "status" | "receivedAt"
 >;
 
 export interface EngineData {

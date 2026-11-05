@@ -22,6 +22,7 @@ export interface OrderLineView {
   orderUnits: number;
   capital: number;
   previousOrderUnits: number | null; // mismo modelo en el análisis anterior
+  demandFactor: number | null; // factor de demanda que pidió el planificador para este modelo (p. ej. 1.2)
   explanation: string;
   detail: OrderLineDetail;
 }
@@ -37,6 +38,7 @@ export interface OrderRunView {
   totalUnits: number;
   totalCapital: number;
   narrative: string | null;
+  rulesSummary: string; // con qué reglas se calculó (línea de total)
   lines: OrderLineView[]; // ordenadas por pedido, mayor primero
 }
 
@@ -60,4 +62,12 @@ export interface CalculationContext {
   months: string[]; // meses que cubre el cálculo (hasta la llegada y la cobertura); una consideración solo puede apuntar a ellos
   rules: ActiveRule[];
   aiEnabled: boolean;
+}
+
+/** Lo que el stepper muestra al terminar: totales del análisis vigente y qué modelos cambiaron. */
+export interface RunSummary {
+  version: number;
+  totalUnits: number;
+  totalCapital: number;
+  changes: { model: string; delta: number }[];
 }

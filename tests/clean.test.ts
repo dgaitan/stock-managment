@@ -3,6 +3,7 @@ import {
   collapseSpaces,
   computeLineHash,
   excelSerialToISODate,
+  isCancelledOrder,
   isCreditNote,
   isFleetOutlier,
   normalizeBranchName,
@@ -140,5 +141,19 @@ describe("excelSerialToISODate", () => {
 describe("collapseSpaces", () => {
   it("recorta y colapsa espacios internos", () => {
     expect(collapseSpaces("  Corolla   Cross  ")).toBe("Corolla Cross");
+  });
+});
+
+describe("isCancelledOrder", () => {
+  it("reconoce cancelado y anulado sin importar mayúsculas ni espacios", () => {
+    expect(isCancelledOrder("Cancelado")).toBe(true);
+    expect(isCancelledOrder("  CANCELADA ")).toBe(true);
+    expect(isCancelledOrder("Anulado")).toBe(true);
+  });
+
+  it("los estados del caso y un estado vacío no son cancelación", () => {
+    expect(isCancelledOrder("En tránsito")).toBe(false);
+    expect(isCancelledOrder("Recibido")).toBe(false);
+    expect(isCancelledOrder(null)).toBe(false);
   });
 });

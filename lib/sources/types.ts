@@ -92,13 +92,20 @@ export interface NormalizedModelEconomics {
 export interface ImportStats {
   modelosDetectados: number;
   modelosNoMapeados: string[];
+  filasModeloSinMapear: number; // filas de cualquier hoja cuyo modelo no se pudo mapear (quedan fuera del cálculo)
+  motivosNoMapeados: string[];
+  leadsMotivoSinMapear: number; // leads con un motivo de pérdida que no está en el diccionario
   ventasFilasLeidas: number;
   ventasDuplicadosEliminados: number;
   ventasNotasCreditoAplicadas: number;
   leadsDuplicadosEliminados: number;
 }
 
+/** Qué hojas trae el archivo, con las mismas claves que `NormalizedImport`. Una hoja ausente no se toca. */
+export type PresentSheets = Record<"sales" | "inventory" | "leads" | "factoryOrders" | "bulletins" | "economics", boolean>;
+
 export interface NormalizedImport {
+  present: PresentSheets;
   sales: NormalizedSale[];
   inventory: NormalizedInventorySnapshot[];
   leads: NormalizedLead[];

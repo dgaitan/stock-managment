@@ -24,6 +24,10 @@ forecast_weights:
 
 seasonality_min_years: 2 # anios distintos minimos para confiar en un indice estacional por mes
 
+# Meses de historia (ventas e inventario) por debajo de los cuales la importación advierte:
+# la estacionalidad pide 2 años y el pronóstico pondera 12 meses.
+min_history_months: 24
+
 safety_stock:
   z_high_margin: 1.65
   z_mid_margin: 1.28

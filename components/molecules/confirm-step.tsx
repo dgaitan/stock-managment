@@ -1,97 +1,74 @@
 import { CheckIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { InfoTip } from "@/components/molecules/info-tip";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import type { ValidatedConsiderations } from "@/lib/ai/considerations";
-import { groupRulesByBulletin } from "@/lib/orders/ruleGroups";
-import type { ActiveRule } from "@/lib/orders/types";
+import { isGroupActive, type RuleGroup } from "@/lib/orders/ruleGroups";
 
 type ConfirmStepProps = {
-  rules: ActiveRule[];
+  groups: RuleGroup[];
   omitted: number[];
   interpretation: ValidatedConsiderations | null;
-  saveAsBulletin: boolean;
-  onSaveChange: (value: boolean) => void;
+  nextVersion: number;
 };
 
-function Section({ title, tip, children }: { title: ReactNode; tip?: string; children: ReactNode }) {
+function Interpreted({ tone, children }: { tone: "applied" | "skipped"; children: ReactNode }) {
+  const applied = tone === "applied";
   return (
-    <section className="flex flex-col gap-2">
-      <h3 className="flex items-center gap-1 text-sm font-semibold">
-        {title}
-        {tip ? <InfoTip label="Más información">{tip}</InfoTip> : null}
-      </h3>
-      {children}
-    </section>
-  );
-}
-
-function Interpreted({ tone, label, children }: { tone: "applied" | "skipped"; label: string; children: ReactNode }) {
-  const styles =
-    tone === "applied"
-      ? { box: "border-green-200 bg-green-50", badge: "border-green-200 bg-green-100 text-green-900" }
-      : { box: "border-amber-200 bg-amber-50", badge: "border-amber-200 bg-amber-100 text-amber-900" };
-  return (
-    <li className={`flex items-start gap-2.5 rounded-lg border px-3.5 py-3 text-[13px] ${styles.box}`}>
-      <Badge variant="outline" className={styles.badge}>
-        {label}
-      </Badge>
-      <span className="flex-1">{children}</span>
+    <li
+      className={`flex items-start gap-2.5 rounded-lg border px-3.5 py-3 ${applied ? "border-green-200 bg-green-50" : "border-amber-200 bg-amber-50"}`}
+    >
+      <Badge variant={applied ? "green" : "amber"}>{applied ? "Se aplica" : "No se aplica"}</Badge>
+      <div className="flex-1 text-[13px]">{children}</div>
     </li>
   );
 }
 
 /** Resumen antes de calcular: qué se aplica y qué no. Nada se ignora en silencio. */
-export function ConfirmStep({ rules, omitted, interpretation, saveAsBulletin, onSaveChange }: ConfirmStepProps) {
+export function ConfirmStep({ groups, omitted, interpretation, nextVersion }: ConfirmStepProps) {
+  const active = groups.filter((g) => isGroupActive(g, omitted));
   const applied = interpretation?.applied ?? [];
   const notApplied = interpretation?.notApplied ?? [];
+  const total = active.length + applied.length;
 
   return (
-    <div className="flex flex-col gap-5">
-      <Section
-        title={
-          <>
-            Reglas de los comunicados <span className="font-normal text-muted-foreground">· {rules.length - omitted.length}</span>
-          </>
-        }
-      >
+    <>
+      <section>
+        <h3 className="mb-2 text-sm font-semibold">
+          Reglas de los comunicados <span className="font-normal text-muted-foreground">· {active.length}</span>
+        </h3>
         <ul className="flex flex-wrap gap-1.5">
-          {groupRulesByBulletin(rules).map((group) => {
-            const off = group.optional.filter((r) => omitted.includes(r.id)).length;
-            return (
-              <li key={`${group.origin}-${group.title}`}>
-                <Badge variant="outline" className="h-auto gap-1.5 px-2.5 py-1">
-                  <CheckIcon aria-hidden className="text-green-700" />
-                  {group.title}
-                  {off > 0 ? <span className="text-muted-foreground">· −{off}</span> : null}
-                </Badge>
-              </li>
-            );
-          })}
+          {active.map((group) => (
+            <li key={`${group.origin}-${group.title}`}>
+              <Badge variant="outline" className="gap-1.5 py-1">
+                <CheckIcon aria-hidden className="text-green-700" />
+                {group.title}
+              </Badge>
+            </li>
+          ))}
         </ul>
-      </Section>
+      </section>
       {interpretation ? (
-        <Section title="Tus reglas, así se interpretaron" tip="La IA no calcula cantidades: el motor calcula con estos parámetros.">
+        <section>
+          <h3 className="mb-2 text-sm font-semibold">Tus reglas, así se interpretaron</h3>
           <ul className="flex flex-col gap-2">
             {applied.map((item) => (
-              <Interpreted key={item} tone="applied" label="Se aplica">
+              <Interpreted key={item} tone="applied">
                 {item}
               </Interpreted>
             ))}
             {notApplied.map((item) => (
-              <Interpreted key={`${item.text}-${item.reason}`} tone="skipped" label="No se aplica">
+              <Interpreted key={`${item.text}-${item.reason}`} tone="skipped">
                 «{item.text}»
-                <span className="block text-xs text-muted-foreground">{item.reason}</span>
+                <div className="mt-0.5 text-xs text-muted-foreground">{item.reason}</div>
               </Interpreted>
             ))}
           </ul>
-          <label className="flex items-center gap-2 text-[13px]">
-            <Checkbox checked={saveAsBulletin} onCheckedChange={(checked) => onSaveChange(checked === true)} />
-            Guardar como comunicado para próximos ciclos
-          </label>
-        </Section>
+        </section>
       ) : null}
-    </div>
+      <p className="text-xs text-muted-foreground">
+        La IA no calcula cantidades. El motor calcula con estas {total} reglas y guarda el análisis v{nextVersion}
+        {nextVersion > 1 ? `; el v${nextVersion - 1} queda en el historial.` : "."}
+      </p>
+    </>
   );
 }

@@ -2,6 +2,7 @@ import { getTableColumns, inArray, sql, type SQL } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
 import * as schema from "@/lib/db/schema";
 import type { Executor, FactRows } from "@/lib/db/factRows";
+import type { DeletionPlan } from "@/lib/db/importDiff";
 
 const BATCH_SIZE = 500;
 
@@ -25,12 +26,24 @@ function excludedSet(table: PgTable, skip: string[]): Record<string, SQL> {
  * Escribe la importación. Se llama dentro de la transacción de commitImport:
  * - ventas, leads y pedidos: upsert por clave de negocio; solo se reescribe la
  *   fila si cambió su line_hash (p. ej. un lead que pasó a «Perdida» o un
- *   pedido que cambió de ETA o pasó a «Recibido»). Nada se borra.
- * - inventario: se reemplazan solo los meses que trae el archivo.
+ *   pedido que cambió de ETA o pasó a «Recibido»). Se borran solo las claves de
+ *   `deletions` (modo «Reemplazar datos»: las que el archivo ya no trae).
+ * - inventario: se reemplazan los meses de `deletions.inventoryMonths` (los del
+ *   archivo, o todos si la hoja se reemplaza).
  * - comunicados: se agregan los que no existen (fecha + asunto); los que ya
  *   están no se tocan, porque el usuario puede haberlos editado o archivado.
  */
-export async function applyImport(tx: Executor, rows: FactRows): Promise<void> {
+export async function applyImport(tx: Executor, rows: FactRows, deletions: DeletionPlan): Promise<void> {
+  for (const keys of chunk(deletions.sales, BATCH_SIZE)) {
+    await tx.delete(schema.sales).where(inArray(schema.sales.businessKey, keys));
+  }
+  for (const keys of chunk(deletions.leads, BATCH_SIZE)) {
+    await tx.delete(schema.leads).where(inArray(schema.leads.externalId, keys));
+  }
+  for (const keys of chunk(deletions.factoryOrders, BATCH_SIZE)) {
+    await tx.delete(schema.factoryOrders).where(inArray(schema.factoryOrders.businessKey, keys));
+  }
+
   for (const batch of chunk(rows.sales, BATCH_SIZE)) {
     await tx
       .insert(schema.sales)
@@ -64,8 +77,11 @@ export async function applyImport(tx: Executor, rows: FactRows): Promise<void> {
       });
   }
 
-  if (rows.inventoryMonths.length > 0) {
-    await tx.delete(schema.inventorySnapshots).where(inArray(schema.inventorySnapshots.monthEnd, rows.inventoryMonths));
+  const { inventoryMonths } = deletions;
+  if (inventoryMonths === "all" || inventoryMonths.length > 0) {
+    await tx
+      .delete(schema.inventorySnapshots)
+      .where(inventoryMonths === "all" ? undefined : inArray(schema.inventorySnapshots.monthEnd, inventoryMonths));
     for (const batch of chunk(rows.inventory.map((i) => i.row), BATCH_SIZE)) {
       await tx.insert(schema.inventorySnapshots).values(batch);
     }

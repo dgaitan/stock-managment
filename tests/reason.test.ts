@@ -22,7 +22,7 @@ describe("summarizeReason", () => {
       plan({ imputedStockoutMonths: 6, patioAtCutoff: 0, projectedStockAtArrival: 0 }),
       aging(0),
     );
-    expect(r).toEqual({ badge: "quiebre", text: "Sin unidades en patio; demanda oculta en 6 meses de quiebre" });
+    expect(r).toEqual({ badge: "quiebre", text: "Sin unidades en patio; demanda oculta en 6 meses con stock insuficiente" });
   });
   it("con patio, los meses de quiebre no son una excepción de la tabla", () => {
     const r = summarizeReason(plan({ imputedStockoutMonths: 1, patioAtCutoff: 20 }), aging(0));

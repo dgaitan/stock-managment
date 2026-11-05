@@ -23,6 +23,7 @@ export interface CycleConfig {
   version_mix_window_months: number;
   forecast_weights: { recent_6m: number; prior_6m: number };
   seasonality_min_years: number;
+  min_history_months: number; // menos historia tras importar -> advertencia
   safety_stock: {
     z_high_margin: number;
     z_mid_margin: number;

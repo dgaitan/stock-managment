@@ -1,6 +1,5 @@
-import { PackageIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { APP_NAME } from "@/lib/app";
+import { BrandMark } from "@/components/molecules/brand-mark";
 
 type DashboardLayoutProps = {
   headerActions: ReactNode;
@@ -12,23 +11,18 @@ type DashboardLayoutProps = {
 
 export function DashboardLayout({ headerActions, userMenu, title, subtitle, children }: DashboardLayoutProps) {
   return (
-    <div className="min-h-screen bg-muted/40">
-      <header className="flex min-h-16 items-center gap-4 border-b bg-background px-8 py-3">
-        <div className="flex items-center gap-2.5">
-          <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <PackageIcon aria-hidden className="size-4" />
-          </span>
-          <span className="font-semibold">{APP_NAME}</span>
-        </div>
-        <div className="ml-auto flex items-center gap-1">
+    <div className="min-h-screen bg-subtle">
+      <header className="flex min-h-16 flex-wrap items-center gap-4 border-b border-border bg-background px-8 py-3">
+        <BrandMark size="header" />
+        <div className="ml-auto flex flex-wrap items-center gap-2">
           {headerActions}
           {userMenu}
         </div>
       </header>
-      <main className="mx-auto flex max-w-6xl flex-col gap-5 p-8">
+      <main className="mx-auto flex max-w-[1120px] flex-col gap-5 p-8">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
+          <h1 className="text-2xl font-bold tracking-[-0.02em]">{title}</h1>
+          <p className="mt-1 text-muted-foreground">{subtitle}</p>
         </div>
         {children}
         <p className="py-2 text-center text-xs text-muted-foreground">Datos ficticios — prueba técnica</p>

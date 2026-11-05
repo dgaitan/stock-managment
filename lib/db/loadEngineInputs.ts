@@ -80,6 +80,7 @@ export async function loadEngineInputs(
       orderDate: o.orderDate,
       units: o.units,
       eta: o.eta,
+      status: o.status,
       receivedAt: o.receivedAt,
     })),
   };

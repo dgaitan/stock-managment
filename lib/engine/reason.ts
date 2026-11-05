@@ -8,6 +8,13 @@ import type { StockAging } from "@/lib/engine/aging";
 
 export type ReasonBadge = "quiebre" | "antiguedad" | "fin_generacion";
 
+/** Texto de cada insignia (tabla y exportación). */
+export const REASON_BADGE_LABELS: Record<ReasonBadge, string> = {
+  quiebre: "Falta de stock",
+  antiguedad: ">180 días",
+  fin_generacion: "Fin de generación",
+};
+
 export interface OrderReason {
   badge: ReasonBadge | null;
   text: string;
@@ -32,7 +39,7 @@ export function summarizeReason(plan: ModelOrderPlan, aging: StockAging): OrderR
     const months = plan.imputedStockoutMonths;
     return {
       badge: "quiebre",
-      text: `Sin unidades en patio; demanda oculta en ${months} ${months === 1 ? "mes" : "meses"} de quiebre`,
+      text: `Sin unidades en patio; demanda oculta en ${months} ${months === 1 ? "mes" : "meses"} con stock insuficiente`,
     };
   }
   if (aging.agedUnits > 0 && aging.thresholdDays !== null) {

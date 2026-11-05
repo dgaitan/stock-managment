@@ -1,6 +1,6 @@
 // Textos en español de las reglas que el motor entiende y de la vigencia de un comunicado.
 import { isRuleKey, type RuleKey } from "@/lib/engine/rules";
-import { formatMonthRangeLabel } from "@/lib/engine/explain";
+import { formatWindow } from "@/lib/format";
 
 const RULE_KEY_LABELS: Record<RuleKey, string> = {
   lot_min: "Pedido mínimo",
@@ -20,7 +20,7 @@ export function ruleValueLabel(key: string, value: string): string {
   return value;
 }
 
-/** «Permanente» o «Ventana» seguida del mes y año de la ventana. */
+/** «Permanente» o «Solo» seguido de la ventana (p. ej. «Solo oct-2026»). */
 export function vigenciaLabel(scope: "permanent" | "cycle", cycle: string | null): string {
-  return scope === "cycle" && cycle ? `Ventana ${formatMonthRangeLabel([cycle])}` : "Permanente";
+  return scope === "cycle" && cycle ? `Solo ${formatWindow(cycle)}` : "Permanente";
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groupTransitArrivals, projectStock } from "@/lib/engine/stockprojection";
+import { groupTransitArrivals, isInTransitAtCutoff, projectStock } from "@/lib/engine/stockprojection";
 import type { NormalizedFactoryOrder } from "@/lib/sources/types";
 
 const MONTHS = ["2026-10", "2026-11", "2026-12", "2027-01"];
@@ -93,5 +93,12 @@ describe("groupTransitArrivals", () => {
     });
     expect(result.byMonth["2026-10"]).toBe(5);
     expect(result.afterPeriod).toBe(5);
+  });
+
+  it("un pedido cancelado no cuenta como tránsito ni como llegada", () => {
+    const factoryOrders = [order({ units: 4, eta: "2026-11-03" }), order({ units: 10, eta: "2026-11-03", status: "Cancelado" })];
+    const result = groupTransitArrivals({ modelName: "Corolla Cross", cutoffDate: "2026-09-30", months: MONTHS, factoryOrders });
+    expect(result.byMonth["2026-11"]).toBe(4);
+    expect(isInTransitAtCutoff(factoryOrders[1], "Corolla Cross", "2026-09-30")).toBe(false);
   });
 });

@@ -1,6 +1,9 @@
 "use client";
 
-import { CheckCircle2Icon, SparklesIcon } from "lucide-react";
+import { ArrowRightIcon, SparklesIcon } from "lucide-react";
+import { useState } from "react";
+import { CalculationDone } from "@/components/molecules/calculation-done";
+import { CalculationRunning } from "@/components/molecules/calculation-running";
 import { ConfirmStep } from "@/components/molecules/confirm-step";
 import { ConsiderationsStep } from "@/components/molecules/considerations-step";
 import { RulesStep } from "@/components/molecules/rules-step";
@@ -8,6 +11,7 @@ import { StepperProgress } from "@/components/molecules/stepper-progress";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
   DialogClose,
   DialogContent,
   DialogDescription,
@@ -16,106 +20,155 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { useBulletinsDrawer } from "@/hooks/use-bulletins-drawer";
 import { useCalculationStepper } from "@/hooks/use-calculation-stepper";
-import { formatMonthRangeLabel } from "@/lib/engine/explain";
-import { formatIsoDate } from "@/lib/format";
+import { monthLabelWithYear } from "@/lib/engine/explain";
+import { formatShortDate, formatWindow } from "@/lib/format";
+import { groupRulesByBulletin, isGroupActive } from "@/lib/orders/ruleGroups";
+import type { RunSummary } from "@/lib/orders/types";
 
-export function CalculateDialog() {
+const Sparkles = () => <SparklesIcon data-icon="inline-start" />;
+
+/** Stepper «Calcular pedido». `latest` es el análisis vigente: al terminar ya trae el recién calculado. */
+export function CalculateDialog({ latest }: { latest: RunSummary | null }) {
+  const [open, setOpen] = useState(false);
+  const bulletins = useBulletinsDrawer();
   const stepper = useCalculationStepper();
   const { state, pending } = stepper;
   const { step, context } = state;
-  const inWizard = step === "rules" || step === "considerations" || step === "confirm";
-  const activeRules = context ? context.rules.length - state.omitted.length : 0;
+  const groups = context ? groupRulesByBulletin(context.rules) : [];
+  const activeGroups = groups.filter((g) => isGroupActive(g, state.omitted));
+  const userRules = state.interpretation?.applied.length ?? 0;
   const subtitle = context
-    ? `Ventana ${formatMonthRangeLabel([context.window])} · llegada ${formatMonthRangeLabel([context.arrivalMonth])} · datos al ${formatIsoDate(context.cutoffDate)}`
+    ? `Ventana ${formatWindow(context.window)} · llegada ${monthLabelWithYear(context.arrivalMonth)} · datos al ${formatShortDate(context.cutoffDate)}`
     : "Cargando…";
 
+  const onOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (isOpen) stepper.open();
+  };
+  const manageBulletins = () => {
+    setOpen(false);
+    bulletins.setOpen(true);
+  };
+
   return (
-    <Dialog onOpenChange={(isOpen) => (isOpen ? stepper.open() : undefined)}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger render={<Button />}>
-        <SparklesIcon data-icon="inline-start" />
+        <Sparkles />
         Calcular pedido
       </DialogTrigger>
-      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-[720px]" showCloseButton={step !== "running"}>
-        <DialogHeader className="gap-0.5 px-6 pt-5 pb-4">
-          <DialogTitle className="text-lg">Calcular pedido</DialogTitle>
+      <DialogContent className="sm:max-w-[720px]" showCloseButton={step !== "running"}>
+        <DialogHeader>
+          <DialogTitle>Calcular pedido</DialogTitle>
           <DialogDescription>{subtitle}</DialogDescription>
         </DialogHeader>
-        {inWizard ? <StepperProgress current={step} /> : null}
+        <StepperProgress current={step} />
 
-        <div className="max-h-[55vh] min-h-40 overflow-auto px-6 py-5">
+        <DialogBody>
           {step === "rules" ? (
             context ? (
-              <RulesStep rules={context.rules} omitted={state.omitted} onToggle={stepper.toggleRule} />
+              <RulesStep groups={groups} omitted={state.omitted} onToggle={stepper.toggleRules} onManageBulletins={manageBulletins} />
             ) : (
-              <p role="status" className="text-sm text-muted-foreground">
+              <p role="status" className="text-[13px] text-muted-foreground">
                 {state.error ?? "Cargando…"}
               </p>
             )
           ) : null}
           {step === "considerations" ? (
-            <ConsiderationsStep text={state.text} onChange={stepper.setText} disabled={pending} />
-          ) : null}
-          {step === "confirm" && context ? (
-            <ConfirmStep
-              rules={context.rules}
-              omitted={state.omitted}
-              interpretation={state.interpretation}
+            <ConsiderationsStep
+              text={state.text}
+              onChange={stepper.setText}
               saveAsBulletin={state.saveAsBulletin}
               onSaveChange={stepper.setSave}
+              disabled={pending}
             />
           ) : null}
-          {step === "running" ? (
-            <div role="status" className="flex flex-col gap-3 py-8">
-              <p className="text-sm font-medium">Calculando…</p>
-              <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                <div className="h-full w-1/2 animate-pulse rounded-full bg-primary" />
-              </div>
-            </div>
+          {step === "confirm" ? (
+            <ConfirmStep
+              groups={groups}
+              omitted={state.omitted}
+              interpretation={state.interpretation}
+              nextVersion={(latest?.version ?? 0) + 1}
+            />
           ) : null}
-          {step === "done" && state.result ? (
-            <div role="status" className="flex flex-col items-center gap-2 py-8 text-center">
-              <CheckCircle2Icon aria-hidden className="size-8 text-green-600" />
-              <p className="font-semibold">Datos actualizados</p>
-              <p className="text-sm text-muted-foreground">Análisis v{state.result.version}</p>
-              {state.result.narrativeFailed ? (
-                <p role="alert" className="text-xs text-destructive">
-                  Sin lectura de IA esta vez.
-                </p>
-              ) : null}
-            </div>
+          {step === "running" && context ? (
+            <CalculationRunning
+              models={context.models.length}
+              cutoffDate={context.cutoffDate}
+              rules={activeGroups.length + userRules}
+              withNarrative={context.aiEnabled}
+            />
           ) : null}
+          {step === "done" && state.result ? <CalculationDone version={state.result.version} summary={latest} /> : null}
           {state.error && step !== "rules" ? (
-            <p role="alert" className="pt-2 text-sm text-destructive">
+            <p role="alert" className="text-[13px] text-destructive">
               {state.error}
             </p>
           ) : null}
-        </div>
+        </DialogBody>
 
-        <DialogFooter className="items-center border-t bg-background px-6 py-4 sm:justify-between">
-          <span className="text-[13px] text-muted-foreground">
-            {step === "rules" && context ? `${activeRules} de ${context.rules.length} reglas activas` : null}
-          </span>
-          <div className="flex gap-2">
-            {step === "done" ? <DialogClose render={<Button />}>Ver ahora</DialogClose> : null}
-            {step === "rules" ? <DialogClose render={<Button variant="outline" />}>Cancelar</DialogClose> : null}
-            {step === "considerations" || step === "confirm" ? (
+        <DialogFooter>
+          {step === "rules" ? (
+            <>
+              <span className="text-[13px] text-muted-foreground">
+                {context ? `${activeGroups.length} de ${groups.length} reglas activas` : null}
+              </span>
+              <div className="flex gap-2">
+                <DialogClose render={<Button variant="outline" />}>Cancelar</DialogClose>
+                <Button onClick={stepper.next} disabled={pending || !context}>
+                  Siguiente
+                  <ArrowRightIcon data-icon="inline-end" />
+                </Button>
+              </div>
+            </>
+          ) : null}
+          {step === "considerations" ? (
+            <>
               <Button variant="outline" onClick={stepper.back} disabled={pending}>
                 Atrás
               </Button>
-            ) : null}
-            {step === "rules" || step === "considerations" ? (
-              <Button onClick={stepper.next} disabled={pending || (step === "rules" && !context)}>
-                {step === "considerations" && pending ? "Interpretando…" : step === "considerations" && !state.text.trim() ? "Omitir" : "Siguiente"}
+              <div className="flex gap-2">
+                <Button variant="ghost" onClick={stepper.skip} disabled={pending}>
+                  Omitir
+                </Button>
+                <Button onClick={stepper.next} disabled={pending || !state.text.trim()}>
+                  <Sparkles />
+                  {pending ? "Interpretando…" : "Interpretar y continuar"}
+                </Button>
+              </div>
+            </>
+          ) : null}
+          {step === "confirm" ? (
+            <>
+              <Button variant="outline" onClick={stepper.back}>
+                Atrás
               </Button>
-            ) : null}
-            {step === "confirm" ? (
               <Button onClick={stepper.calculate}>
-                <SparklesIcon data-icon="inline-start" />
+                <Sparkles />
                 Calcular pedido
               </Button>
-            ) : null}
-          </div>
+            </>
+          ) : null}
+          {step === "running" ? (
+            <>
+              <span />
+              <Button variant="outline" disabled>
+                Calculando…
+              </Button>
+            </>
+          ) : null}
+          {step === "done" ? (
+            <>
+              <span className="text-xs text-muted-foreground">
+                {state.result?.narrativeFailed ? "Sin lectura de IA esta vez." : null}
+              </span>
+              <DialogClose render={<Button />}>
+                Ver ahora
+                <ArrowRightIcon data-icon="inline-end" />
+              </DialogClose>
+            </>
+          ) : null}
         </DialogFooter>
       </DialogContent>
     </Dialog>

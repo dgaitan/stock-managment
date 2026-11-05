@@ -1,27 +1,24 @@
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { OrderReason, ReasonBadge } from "@/lib/engine/reason";
+import { REASON_BADGE_LABELS, type OrderReason, type ReasonBadge } from "@/lib/engine/reason";
+import { demandFactorLabel } from "@/lib/orders/runSummary";
 
-const BADGES: Record<ReasonBadge, { label: string; className: string }> = {
-  quiebre: { label: "Quiebre", className: "border-red-200 bg-red-100 text-red-900" },
-  antiguedad: { label: ">180 días", className: "border-orange-200 bg-orange-100 text-orange-900" },
-  fin_generacion: { label: "Fin de generación", className: "border-zinc-200 bg-zinc-100 text-zinc-700" },
+const BADGE_VARIANTS: Record<ReasonBadge, "red" | "orange" | "secondary"> = {
+  quiebre: "red",
+  antiguedad: "orange",
+  fin_generacion: "secondary",
 };
 
-/** Insignia solo en excepciones y el motivo en una línea; el texto completo va en el tooltip. */
-export function ReasonCell({ reason }: { reason: OrderReason }) {
-  const badge = reason.badge ? BADGES[reason.badge] : null;
+/** Insignia solo en excepciones (o la regla del planificador, en azul) y el motivo en una línea. */
+export function ReasonCell({ reason, demandFactor }: { reason: OrderReason; demandFactor: number | null }) {
+  const badge = reason.badge ? { label: REASON_BADGE_LABELS[reason.badge], variant: BADGE_VARIANTS[reason.badge] } : null;
   return (
-    <span className="flex items-center gap-2 text-[13px] text-muted-foreground">
-      {badge ? (
-        <Badge variant="outline" className={badge.className}>
-          {badge.label}
-        </Badge>
+    <span className="flex items-center gap-2 text-[13px] text-zinc-600">
+      {demandFactor !== null ? (
+        <Badge variant="blue">{demandFactorLabel(demandFactor)}</Badge>
+      ) : badge ? (
+        <Badge variant={badge.variant}>{badge.label}</Badge>
       ) : null}
-      <Tooltip>
-        <TooltipTrigger render={<span className="max-w-72 truncate" />}>{reason.text}</TooltipTrigger>
-        <TooltipContent>{reason.text}</TooltipContent>
-      </Tooltip>
+      {reason.text}
     </span>
   );
 }

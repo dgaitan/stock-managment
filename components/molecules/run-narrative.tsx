@@ -1,10 +1,10 @@
-/** Análisis redactado por la IA (primer bloque) y sus alertas (líneas que empiezan con «- »). */
+import { parseNarrative } from "@/lib/orders/narrativeText";
+
+/** Análisis redactado por la IA (primer bloque) y sus alertas. */
 export function RunNarrative({ narrative }: { narrative: string }) {
-  const lines = narrative.split("\n").filter((l) => l.trim() !== "");
-  const alerts = lines.filter((l) => l.startsWith("- ")).map((l) => l.slice(2));
-  const analysis = lines.filter((l) => !l.startsWith("- ")).join(" ");
+  const { analysis, alerts } = parseNarrative(narrative);
   return (
-    <div className="flex flex-col gap-1.5 text-sm">
+    <div className="flex flex-col gap-1.5 text-sm leading-[1.6]">
       <p>{analysis}</p>
       {alerts.length > 0 ? (
         <ul className="list-disc pl-5 text-muted-foreground">

@@ -114,6 +114,16 @@ export function normalizeLossReason(
   return LOSS_REASON_MAP[key] ?? null;
 }
 
+/**
+ * true si el estado del pedido a fábrica dice que se canceló o anuló: esas
+ * unidades no van a llegar y no cuentan como tránsito. Los datos del caso solo
+ * traen «Recibido» y «En tránsito»; cualquier otro estado sigue siendo tránsito.
+ */
+export function isCancelledOrder(status: string | null | undefined): boolean {
+  if (!status) return false;
+  return /^(cancelad|anulad)/i.test(collapseSpaces(status));
+}
+
 /** true si la factura corresponde a una nota de crédito (prefijo "NC"). */
 export function isCreditNote(invoice: string | null | undefined): boolean {
   if (!invoice) return false;

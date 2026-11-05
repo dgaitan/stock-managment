@@ -20,6 +20,13 @@ const SPANISH_MONTHS = [
   "dic",
 ];
 
+const SPANISH_MONTHS_LONG = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
+/** "2026-10" -> "octubre" */
+export function monthLongLabel(key: string): string {
+  return SPANISH_MONTHS_LONG[Number(key.slice(5, 7)) - 1];
+}
+
 export function monthLabel(key: string): string {
   const month = Number(key.slice(5, 7));
   return SPANISH_MONTHS[month - 1];
@@ -35,7 +42,8 @@ export function formatMonthRangeLabel(months: string[]): string {
   return `${monthLabel(first)}-${monthLabel(last)} ${year}`;
 }
 
-function monthLabelWithYear(key: string): string {
+/** "2027-02" -> "feb 2027" */
+export function monthLabelWithYear(key: string): string {
   return `${monthLabel(key)} ${key.slice(0, 4)}`;
 }
 
@@ -55,7 +63,7 @@ export const FLAG_LABELS: Record<string, string> = {
   pedido_minimo_del_lote: "se pide el mínimo del lote",
   demanda_ajustada_por_usuario: "demanda multiplicada por una consideración del planificador",
   excluido_por_usuario: "excluido del pedido por el planificador",
-  demanda_imputada_por_quiebre: "demanda de meses de quiebre imputada al promedio sin quiebre",
+  demanda_imputada_por_quiebre: "demanda de meses con stock insuficiente imputada al promedio de los meses con stock suficiente",
 };
 
 /** Texto en español del "por qué" del pedido sugerido para un modelo. */
@@ -70,8 +78,8 @@ export function explainOrder(plan: ModelOrderPlan): string {
   if (plan.imputedStockoutMonths > 0) {
     parts.push(
       `${plan.imputedStockoutMonths} ${plan.imputedStockoutMonths === 1 ? "mes" : "meses"} de la historia ` +
-        "tuvieron quiebre de stock; sus ventas están recortadas por falta de unidades, así que su demanda " +
-        "se subió al promedio de los meses sin quiebre.",
+        "tuvieron stock insuficiente; sus ventas están recortadas por falta de unidades, así que su demanda " +
+        "se subió al promedio de los meses con stock suficiente.",
     );
   }
 
@@ -111,4 +119,29 @@ export function explainOrder(plan: ModelOrderPlan): string {
   }
 
   return parts.join(" ");
+}
+
+/**
+ * Resumen corto para el encabezado de «Ver por qué» (dos frases como máximo).
+ * El detalle numérico va en el cálculo paso a paso; el texto completo es explainOrder.
+ */
+export function explainLead(plan: ModelOrderPlan): string {
+  const arrival = monthLabelWithYear(plan.arrivalMonth);
+  if (plan.imputedStockoutMonths > 0) {
+    const months = `${plan.imputedStockoutMonths} ${plan.imputedStockoutMonths === 1 ? "mes" : "meses"}`;
+    return (
+      `Las ventas de ${plan.modelName} están recortadas porque no hubo unidades para vender. ` +
+      `En ${months} de la historia el stock fue insuficiente, así que la demanda de esos meses se subió al promedio de los meses con stock suficiente.`
+    );
+  }
+  if (plan.flags.includes("ultima_ventana_de_generacion")) {
+    return (
+      `Es la última ventana de esta generación de ${plan.modelName}: se cubre solo hasta el lanzamiento y sin colchón de seguridad, ` +
+      "porque lo que no se venda no tiene apoyo de liquidación."
+    );
+  }
+  return (
+    `Se proyecta una demanda de ~${round1(plan.forecastMonthlyRate)} u/mes para ${plan.modelName}. ` +
+    `Con lo que hay en patio y en tránsito, el stock proyectado a ${arrival} es de ${round1(plan.projectedStockAtArrival)} u.`
+  );
 }

@@ -54,11 +54,18 @@ Entrega: jueves 5 de noviembre de 2026, 6:00 p.m.
 - Importación por **clave de negocio** (`business_key` en ventas y pedidos,
   `external_id` en leads) + `line_hash` del contenido: reimportar el mismo Excel
   no cambia nada; un archivo de otro ciclo inserta lo nuevo y **actualiza** lo que
-  cambió (resultado de un lead, ETA o estado de un pedido), nunca duplica. El
-  inventario se reemplaza solo en los meses que trae el archivo. Los comunicados
-  son un CRUD propio: la importación solo agrega los que no existen (fecha +
-  asunto), nunca borra ni sobrescribe. Siempre vista previa antes de escribir
-  (`lib/db/importWorkbook.ts`).
+  cambió (resultado de un lead, ETA o estado de un pedido), nunca duplica.
+  **«Reemplazar datos» (marcado por defecto; `--combinar` en la CLI lo apaga):**
+  cada hoja de hechos que trae el archivo (ventas, leads, pedidos, inventario)
+  reemplaza esa hoja, así que lo que el archivo ya no trae se elimina; las hojas
+  que no trae no se tocan. Desmarcado, solo agrega y actualiza (el inventario igual
+  se reemplaza en los meses del archivo). Nunca se borra lo creado en la app
+  (comunicados, `cycle_rules`, análisis, alias) ni la economía de un modelo que el
+  archivo no trae. Los comunicados son un CRUD propio: la importación solo agrega
+  los que no existen (fecha + asunto). Siempre vista previa antes de escribir
+  (`lib/db/importWorkbook.ts`), con columna «Se eliminan»; modelos o motivos sin
+  mapear y menos de `min_history_months` de historia son advertencias que hay que
+  aceptar para confirmar (`lib/import/warnings.ts`).
 
 ## Convenciones de código
 

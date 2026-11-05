@@ -17,9 +17,20 @@ import type {
   NormalizedLead,
   NormalizedModelEconomics,
   NormalizedSale,
+  PresentSheets,
 } from "@/lib/sources/types";
 
 const DEFAULT_FLEET_OUTLIER_MIN_UNITS = 10;
+
+/** Nombre de cada hoja en el Excel del caso. */
+const SHEET_NAMES = {
+  sales: "Ventas",
+  inventory: "Inventario",
+  leads: "Leads",
+  factoryOrders: "Pedidos",
+  bulletins: "Comunicados",
+  economics: "Economía por modelo",
+} as const satisfies Record<keyof PresentSheets, string>;
 
 // Columnas de Leads que definen el contenido de una oportunidad (su line_hash).
 const LEAD_COLUMNS = [
@@ -47,17 +58,17 @@ export function parseWorkbook(
   options: ParseOptions = {},
 ): NormalizedImport {
   const fleetOutlierMinUnits = options.fleetOutlierMinUnits ?? DEFAULT_FLEET_OUTLIER_MIN_UNITS;
-  const modelosNoMapeados = new Set<string>();
+  const filasPorModeloNoMapeado = new Map<string, number>();
 
   function resolveModel(raw: unknown): { raw: string; normalized: string | null } {
     const rawText = toText(raw) ?? "";
     const normalized = normalizeModelName(rawText, canonicalModels);
-    if (rawText && !normalized) modelosNoMapeados.add(rawText);
+    if (rawText && !normalized) filasPorModeloNoMapeado.set(rawText, (filasPorModeloNoMapeado.get(rawText) ?? 0) + 1);
     return { raw: rawText, normalized };
   }
 
   // --- Ventas ---
-  const ventasRows = sheetRows(workbook, "Ventas");
+  const ventasRows = sheetRows(workbook, SHEET_NAMES.sales);
   const seenSaleHashes = new Set<string>();
   let duplicadosEliminados = 0;
   let notasCreditoAplicadas = 0;
@@ -124,7 +135,7 @@ export function parseWorkbook(
   }
 
   // --- Inventario ---
-  const inventory: NormalizedInventorySnapshot[] = sheetRows(workbook, "Inventario").map((row) => {
+  const inventory: NormalizedInventorySnapshot[] = sheetRows(workbook, SHEET_NAMES.inventory).map((row) => {
     const model = resolveModel(row["Modelo"]);
     return {
       monthEnd: toISODate(row["Mes (cierre)"]) ?? "",
@@ -140,7 +151,7 @@ export function parseWorkbook(
   // --- Leads ---
   // Un ID Oportunidad repetido es la misma oportunidad: se conserva la primera
   // fila para no contar dos veces una venta perdida o una sustitución.
-  const leadRows = sheetRows(workbook, "Leads");
+  const leadRows = sheetRows(workbook, SHEET_NAMES.leads);
   const leadRowsById = new Map<string, (typeof leadRows)[number]>();
   for (const row of leadRows) {
     const id = toText(row["ID Oportunidad"]) ?? "";
@@ -175,7 +186,7 @@ export function parseWorkbook(
   });
 
   // --- Pedidos (factory orders) ---
-  const factoryOrders: NormalizedFactoryOrder[] = sheetRows(workbook, "Pedidos").map((row) => {
+  const factoryOrders: NormalizedFactoryOrder[] = sheetRows(workbook, SHEET_NAMES.factoryOrders).map((row) => {
     const model = resolveModel(row["Modelo"]);
     const orderNo = toText(row["No. pedido"]) ?? "";
     const orderDate = toISODate(row["Fecha pedido"]);
@@ -203,7 +214,7 @@ export function parseWorkbook(
   });
 
   // --- Comunicados (bulletins) ---
-  const bulletins: NormalizedBulletin[] = sheetRows(workbook, "Comunicados").map((row) => ({
+  const bulletins: NormalizedBulletin[] = sheetRows(workbook, SHEET_NAMES.bulletins).map((row) => ({
     date: toISODate(row["Fecha"]),
     issuer: toText(row["Emisor"]),
     subject: toText(row["Asunto"]),
@@ -211,7 +222,7 @@ export function parseWorkbook(
   }));
 
   // --- Economía por modelo ---
-  const economics: NormalizedModelEconomics[] = sheetRows(workbook, "Economía por modelo").map((row) => {
+  const economics: NormalizedModelEconomics[] = sheetRows(workbook, SHEET_NAMES.economics).map((row) => {
     const model = resolveModel(row["Modelo"]);
     return {
       modelNameRaw: model.raw,
@@ -224,20 +235,30 @@ export function parseWorkbook(
     };
   });
 
+  // Un motivo escrito que no está en el diccionario no se adivina: se reporta.
+  const leadsMotivoSinMapear = leads.filter((l) => l.lossReasonRaw !== null && l.lossReasonCategory === null);
+
   const modelosDetectados = new Set(
     sales.map((s) => s.modelName).filter((m): m is string => m !== null),
   ).size;
 
   const stats: ImportStats = {
     modelosDetectados,
-    modelosNoMapeados: [...modelosNoMapeados].sort(),
+    modelosNoMapeados: [...filasPorModeloNoMapeado.keys()].sort(),
+    filasModeloSinMapear: [...filasPorModeloNoMapeado.values()].reduce((sum, n) => sum + n, 0),
+    motivosNoMapeados: [...new Set(leadsMotivoSinMapear.flatMap((l) => (l.lossReasonRaw ? [l.lossReasonRaw] : [])))].sort(),
+    leadsMotivoSinMapear: leadsMotivoSinMapear.length,
     ventasFilasLeidas: ventasRows.length,
     ventasDuplicadosEliminados: duplicadosEliminados,
     ventasNotasCreditoAplicadas: notasCreditoAplicadas,
     leadsDuplicadosEliminados: leadRows.length - leadRowsById.size,
   };
 
-  return { sales, inventory, leads, factoryOrders, bulletins, economics, stats };
+  const present = Object.fromEntries(
+    Object.entries(SHEET_NAMES).map(([key, name]) => [key, workbook.SheetNames.includes(name)]),
+  ) as PresentSheets;
+
+  return { present, sales, inventory, leads, factoryOrders, bulletins, economics, stats };
 }
 
 export function parseExcelFile(

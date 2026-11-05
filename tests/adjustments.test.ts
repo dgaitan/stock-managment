@@ -53,6 +53,7 @@ describe("computeModelOrderPlan con consideraciones", () => {
     version_mix_window_months: 12,
     forecast_weights: { recent_6m: 0.6, prior_6m: 0.4 },
     seasonality_min_years: 2,
+    min_history_months: 24,
     safety_stock: {
       z_high_margin: 1.65,
       z_mid_margin: 1.28,

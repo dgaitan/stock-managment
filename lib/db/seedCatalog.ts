@@ -1,8 +1,28 @@
 import type { Executor } from "@/lib/db/factRows";
 import type { CycleConfig } from "@/lib/engine/config";
 import type { CycleRuleRow } from "@/lib/engine/rules";
-import type { NormalizedImport } from "@/lib/sources/types";
+import type { NormalizedImport, NormalizedModelEconomics } from "@/lib/sources/types";
 import * as schema from "@/lib/db/schema";
+
+type ModelEconomicsColumns = Pick<typeof schema.models.$inferInsert, "unitCost" | "marginPct" | "monthlyFinCost">;
+
+/**
+ * Qué se escribe de un modelo del catálogo. Si el archivo trae su economía, se
+ * inserta o actualiza. Si no la trae (un export parcial sin «Economía por modelo»),
+ * un modelo nuevo entra en 0 y uno existente conserva sus cifras: un archivo sin
+ * la hoja no puede borrar el costo, el margen ni el costo financiero.
+ */
+export function modelCatalogWrite(
+  name: string,
+  economics: NormalizedModelEconomics | undefined,
+): { values: typeof schema.models.$inferInsert; update: ModelEconomicsColumns | null } {
+  const columns: ModelEconomicsColumns = {
+    unitCost: String(economics?.avgUnitCost ?? 0),
+    marginPct: String(economics?.marginPct ?? 0),
+    monthlyFinCost: String(economics?.monthlyFinCostPerUnit ?? 0),
+  };
+  return { values: { name, ...columns }, update: economics ? columns : null };
+}
 
 const LOSS_REASON_CATEGORY_LABELS: Record<string, string> = {
   stock: "Falta de inventario",
@@ -31,23 +51,11 @@ export async function seedCatalog(
   );
 
   for (const name of modelNames) {
-    const economics = economicsByModel.get(name);
-    await db
-      .insert(schema.models)
-      .values({
-        name,
-        unitCost: String(economics?.avgUnitCost ?? 0),
-        marginPct: String(economics?.marginPct ?? 0),
-        monthlyFinCost: String(economics?.monthlyFinCostPerUnit ?? 0),
-      })
-      .onConflictDoUpdate({
-        target: schema.models.name,
-        set: {
-          unitCost: String(economics?.avgUnitCost ?? 0),
-          marginPct: String(economics?.marginPct ?? 0),
-          monthlyFinCost: String(economics?.monthlyFinCostPerUnit ?? 0),
-        },
-      });
+    const { values, update } = modelCatalogWrite(name, economicsByModel.get(name));
+    const insert = db.insert(schema.models).values(values);
+    await (update
+      ? insert.onConflictDoUpdate({ target: schema.models.name, set: update })
+      : insert.onConflictDoNothing({ target: schema.models.name }));
   }
 
   const modelRows = await db.select().from(schema.models);
