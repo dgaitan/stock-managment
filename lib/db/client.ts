@@ -11,6 +11,8 @@ if (!connectionString) {
   throw new Error("DATABASE_URL no esta configurado (ver .env.example)");
 }
 
-const client = postgres(connectionString, { max: 1 });
+// prepare: false — el connection string "pooled" de Neon pasa por PgBouncer en
+// modo transaccion, que no soporta prepared statements.
+const client = postgres(connectionString, { max: 1, prepare: false });
 
 export const db = drizzle(client, { schema });
