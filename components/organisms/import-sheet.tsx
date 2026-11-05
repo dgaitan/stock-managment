@@ -52,7 +52,9 @@ export function ImportSheet() {
               ref={input}
               type="file"
               accept=".xlsx"
-              hidden
+              className="sr-only"
+              tabIndex={-1}
+              aria-label="Archivo Excel"
               onChange={(e) => {
                 const chosen = e.target.files?.[0];
                 if (chosen) choose(chosen);
