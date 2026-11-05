@@ -53,3 +53,9 @@ next-env.d.ts
 # project conventions for Claude Code (committed)
 !/.claude/agents/
 !/.claude/rules/
+
+# documentos con cifras del caso (datos ficticios, no publicar)
+/docs/PLAN.md
+/docs/ENTREGA_CASO1.md
+/docs/VALIDACION.md
+/docs/BACKTEST.md
